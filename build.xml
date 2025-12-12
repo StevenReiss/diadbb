@@ -1,0 +1,61 @@
+<project name='diadbb' default='all' >
+
+   <property file='build.properties' />
+   <property name='PRO' value='/pro' />
+   <property name='IVYBIN' value='${PRO}/ivy/java' />
+   <property name='DIADBB' value='${PRO}/diadbb' />
+   <property name='BUBBLESLIB' value='${PRO}/bubbles/lib' />
+
+   <available file="./build.properties" type='file' property='setup.done' />
+   <path id='setuppath'>
+      <pathelement location='..' />
+   </path>
+   <path id='diadpath'>
+      <pathelement location='.' />
+   </path>
+   <property name='setupfile' refid='setuppath' />
+   <property name='diadfile' refid='diadpath' />
+   <target name='setup' unless='setup.done'>
+      <echo file='./build.properties' message="PRO=${setupfile}${line.separator}" />
+      <echo file='./build.properties' message='DIADBB=${diadfile}${line.separator}' append='true' />
+      <mkdir dir='./java/edu/brown/cs/diadbb' />
+      <property name='PRO' value='{setupfile}' />
+      <property name='DIADBB' value='{diadfile}' />
+   </target>
+
+   <available file='${PRO}/ivy' type="dir" property="ivy.present" />
+   <property name='IVYLIB' value='${PRO}/ivy/lib' />
+
+   <property name='DIADLIB' value='${DIADBB}/lib' />
+   <path id='spr.classpath'>
+     <pathelement location='${DIADBB}/java' />
+     <pathelement location='${DIADBB}/javasrc' />
+     <pathelement location='${PRO}/bubbles/java' />
+     <fileset dir='${DIADLIB}' includes='*.jar' />
+     <fileset dir='${IVYLIB}' includes='ivy.jar' />
+     <fileset dir='${PRO}/ivy/lib/eclipsejar' includes='*.jar' />
+  </path>
+
+   <target name='all' depends='setup,compile' />
+
+  <target name='compile' depends='setup'>
+     <javac srcdir='.' destdir='${DIADBB}/java' debug='on' deprecation='on'
+		target='10' source='10'
+		includeantruntime='false'>
+	<classpath refid='spr.classpath' />
+     </javac>
+  </target>
+
+   <path id='jdocsrc'>
+      <pathelement location='./javasrc' />
+      <pathelement location='${PRO}/ivy/javasrc' />
+    </path>
+
+   <target name='doc'>
+      <ant antfile='build.xml' dir='javasrc' target='doc' />
+      <zip zipfile='lib/apidoc.zip' basedir='doc' />
+   </target>
+
+
+</project>
+

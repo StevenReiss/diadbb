@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+<entry key="Barley.grain.debug">false</entry>
+<entry key="Barley.grain.class.path">limba.jar:eclipsejar:ivy.jar:json.jar</entry>
+</properties>
+
