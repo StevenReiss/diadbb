@@ -148,8 +148,8 @@ private BirdFactory()
 
    BoardSetup bs = BoardSetup.getSetup();
    MintControl mc = bs.getMintControl();
-   mc.register("<LIMBAREPLY RID='_VAR_0' />",new DiadHandler());
-   mc.register("<LIMBAREPLY DO='PING' />",new PingHandler());
+   mc.register("<DIADREPLY RID='_VAR_0' />",new DiadReplyHandler());
+   mc.register("<DIADREPLY DO='_VAR_0' />",new DiadMessageHandler());
 
    switch (BoardSetup.getSetup().getRunMode()) {
       case NORMAL :
@@ -437,7 +437,7 @@ Element sendDiadMessage(String cmd,CommandArgs args,String cnts)
 /*										*/
 /********************************************************************************/
 
-private final class DiadHandler implements MintHandler {
+private final class DiadReplyHandler implements MintHandler {
 
    @Override public void receive(MintMessage msg,MintArguments args) {
       Element xml = msg.getXml();
@@ -462,10 +462,28 @@ private final class DiadHandler implements MintHandler {
 
 
 
-private final class PingHandler implements MintHandler {
+private final class DiadMessageHandler implements MintHandler {
 
    @Override public void receive(MintMessage msg,MintArguments args) {
-      msg.replyTo("<PONG/>");
+      Element xml = msg.getXml();
+      String cmd = args.getArgument(0);
+      try {
+         BoardLog.logD("BIRD","Handle DIAD message " + cmd + " " +
+               IvyXml.convertXmlToString(xml));
+         switch (cmd) {
+            case "PING" :
+               msg.replyTo("<PONG/>");
+               break;      
+            default :
+               BoardLog.logE("BRID","Unknown DIAD message " + cmd);
+               msg.replyTo();
+               break;
+          }
+       }
+      catch (Throwable e) {
+         BoardLog.logE("BIRD","Error processing diad message",e);
+         msg.replyTo();
+       }
     }
 
 }	// end of inner class UpdateHandler
