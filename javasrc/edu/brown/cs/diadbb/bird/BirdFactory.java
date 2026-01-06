@@ -41,7 +41,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
+import java.util.WeakHashMap;
 
+import javax.swing.AbstractAction;
 import javax.swing.JPopupMenu;
 
 import org.w3c.dom.Element;
@@ -49,13 +51,17 @@ import org.w3c.dom.Element;
 import edu.brown.cs.bubbles.bale.BaleConstants;
 import edu.brown.cs.bubbles.bale.BaleFactory;
 import edu.brown.cs.bubbles.bale.BaleConstants.BaleContextConfig;
+import edu.brown.cs.bubbles.bddt.BddtConstants;
+import edu.brown.cs.bubbles.bddt.BddtFactory;
 import edu.brown.cs.bubbles.board.BoardConstants;
 import edu.brown.cs.bubbles.board.BoardPluginManager;
 import edu.brown.cs.bubbles.board.BoardProperties;
 import edu.brown.cs.bubbles.board.BoardSetup;
 import edu.brown.cs.bubbles.board.BoardConstants.BoardPluginFilter;
 import edu.brown.cs.bubbles.board.BoardLog;
+import edu.brown.cs.bubbles.buda.BudaBubble;
 import edu.brown.cs.bubbles.buda.BudaRoot;
+import edu.brown.cs.bubbles.bump.BumpClient;
 
 
 public final class BirdFactory implements BirdConstants, MintConstants
@@ -68,9 +74,13 @@ public final class BirdFactory implements BirdConstants, MintConstants
 /*										*/
 /********************************************************************************/
 
-private boolean server_running;
-private boolean server_started;
+private boolean diad_running;
+private boolean diad_started;
+private boolean limba_running;
+private boolean limba_started;
+private Map<String,BirdInstance> instance_map;
 private Map<String,ResponseHandler> hdlr_map;
+private Map<BirdDebugBubble,Boolean> debug_bubbles;
 
 private static BirdFactory the_factory = new BirdFactory();
 
@@ -89,7 +99,7 @@ public static void setup()
  
 
 
-private static final class ResourceFilter implements BoardPluginFilter {
+private static final class ResourceFilter implements BoardPluginFilter { 
 
    @Override public boolean accept(String nm) {
       return false;
@@ -102,7 +112,7 @@ private static final class ResourceFilter implements BoardPluginFilter {
 
 public static void initialize(BudaRoot br)
 {
-// if (!BumpClient.getBump().getOptionBool("bubbles.useDiad")) return;
+   if (!BumpClient.getBump().getOptionBool("bubbles.useDiad")) return;
 
    BoardLog.logD("BIRD","USING LIMBA");
 
@@ -142,9 +152,13 @@ public static BirdFactory getFactory()
 
 private BirdFactory()
 {
-   server_running = false;
-   server_started = false;
+   diad_running = false;
+   diad_started = false;
+   limba_running = false;
+   limba_started = false;
    hdlr_map = new HashMap<>();
+   instance_map = new HashMap<>();
+   debug_bubbles = new WeakHashMap<>();
 
    BoardSetup bs = BoardSetup.getSetup();
    MintControl mc = bs.getMintControl();
@@ -163,6 +177,60 @@ private BirdFactory()
 
 
 
+
+/********************************************************************************/
+/*                                                                              */
+/*      Update methods                                                          */
+/*                                                                              */
+/********************************************************************************/
+
+private void handleUpdate(Element xml)
+{
+   if (IvyXml.isElement(xml,"DIADREPLY")) {
+      xml = IvyXml.getChild(xml,"CANDIDATE");
+    }
+   
+   BirdDebugBubble bbl = findBubble(xml);
+   
+   String id = IvyXml.getAttrString(xml,"ID");
+   BirdInstance binst = instance_map.get(id);
+   if (binst == null) {
+      binst = new BirdInstance(xml);
+      if (binst.shouldRemove()) return; 
+      instance_map.put(id,binst);
+      if (bbl != null) {
+         bbl.addDebugInstance(binst);
+       }
+    }
+   else {
+      binst.update(xml);
+      if (bbl != null) {
+         bbl.updateDebugInstance(binst); 
+       }
+    } 
+   
+   if (binst.shouldRemove()) {
+      instance_map.remove(id);
+      if (bbl != null) {
+         bbl.removeDebugInstance(binst);
+       }
+    }
+}
+
+
+private BirdDebugBubble findBubble(Element xml)
+{
+   Element thrd = IvyXml.getChild(xml,"THREAD");
+   String tid = IvyXml.getAttrString(thrd,"ID");
+   for (BirdDebugBubble bbl : debug_bubbles.keySet()) {
+      if (BddtFactory.getFactory().isThreadRelevant(bbl.getLaunchId(),tid)) { 
+         return bbl; 
+       }
+    }
+   return null;
+}
+
+
 /********************************************************************************/
 /*										*/
 /*	Starting methods							*/
@@ -172,8 +240,9 @@ private BirdFactory()
 private void start()
 {
    startDiad();
-   if (!server_running) return;
-// BoardProperties bp = BoardProperties.getProperties("Bird");
+   if (!diad_running) return;
+   startLimba();
+   if (!limba_running) return;
 }
 
 
@@ -184,20 +253,20 @@ private boolean startDiad()
 {
    BoardSetup bs = BoardSetup.getSetup();
    MintControl mc = bs.getMintControl();
-   BoardProperties bp = BoardProperties.getProperties("Bird");
+   BoardProperties limbaprops = BoardProperties.getProperties("Bird");
 
    if (BoardSetup.getSetup().getRunMode() == BoardConstants.RunMode.CLIENT) {
       MintDefaultReply rply = new MintDefaultReply();
       mc.send("<LIMBA DO='PING' />");
       String rslt = rply.waitForString();
       if (rslt != null) {
-	 server_running = true;
-	 server_started = true;
+	 diad_running = true;
+	 diad_started = true;
 	 return true;
        }
     }
 
-   if (server_running || server_started) return false;
+   if (diad_running || diad_started) return false;
 
    BoardLog.logD("BIRD","Starting diad server");
 
@@ -209,24 +278,11 @@ private boolean startDiad()
 
    args.add(IvyExecQuery.getJavaPath());
 
-   String dbgargs = bp.getProperty("Bird.jvm.args");
-   if (dbgargs != null && dbgargs.contains("###")) {
-      int port = (int) Math.random() * 1000 + 3000;
-      dbgargs = dbgargs.replace("###",Integer.toString(port));
-      BoardLog.logI("BIRD","Diad debug port " + port);
-    }
-   if (dbgargs != null) {
-      StringTokenizer tok = new StringTokenizer(dbgargs);
-      while (tok.hasMoreTokens()) {
-	 args.add(tok.nextToken());
-       }
-    }
    File jarfile = IvyFile.getJarFile(BirdFactory.class);
-
-   String xcp = bp.getProperty("Bird.diad.class.path");
+   String xcp = limbaprops.getProperty("Bird.diad.class.path");
    if (xcp == null) {
       xcp = System.getProperty("java.class.path");
-      String ycp = bp.getProperty("Bird.diad.add.path");
+      String ycp = limbaprops.getProperty("Bird.diad.add.path");
       if (ycp != null) xcp = ycp + File.pathSeparator + xcp;
     }
    else {
@@ -268,13 +324,13 @@ private boolean startDiad()
    args.add(bs.getMintName());
    args.add("-L");
    args.add(logf.getPath());
-   if (bp.getBoolean("Bird.diad.debug")) {
+   if (limbaprops.getBoolean("Bird.diad.debug")) {
       args.add("-D");
     }
 
    synchronized (this) {
-      if (server_started || server_running) return false;
-      server_started = true;
+      if (diad_started || diad_running) return false;
+      diad_started = true;
     }
 
    for (int i = 0; i < 500; ++i) {
@@ -283,7 +339,7 @@ private boolean startDiad()
       String rslt = rply.waitForString(1000);
       BoardLog.logD("BIRD","Diad ping response " + rslt);
       if (rslt != null) {
-	 server_running = true;
+	 diad_running = true;
 	 break;
        }
       if (i == 0) {
@@ -312,7 +368,7 @@ private boolean startDiad()
        }
       catch (InterruptedException e) { }
     }
-   if (!server_running) {
+   if (!diad_running) {
       BoardLog.logE("BIRD","Unable to start diad server: " + args);
       return false;
     }
@@ -320,6 +376,186 @@ private boolean startDiad()
    return true;
 }
 
+
+
+//CHECKSTYLE:OFF
+private boolean startLimba()
+// CHECKSTYLE:ON
+{
+   BoardSetup bs = BoardSetup.getSetup();
+   MintControl mc = bs.getMintControl();
+   BoardProperties baitprops = BoardProperties.getProperties("Bait");
+   
+   if (BoardSetup.getSetup().getRunMode() == BoardConstants.RunMode.CLIENT) {
+      MintDefaultReply rply = new MintDefaultReply();
+      mc.send("<LIMBA DO='PING' />");
+      String rslt = rply.waitForString();
+      if (rslt != null) {
+         limba_running = true;
+         limba_started = true;
+         return true;
+       }
+    }
+   
+   if (limba_running || limba_started) return false;
+   
+   BoardLog.logD("BAIT","Starting limba server");
+   
+   IvyExec exec = null;
+   File wd =  new File(bs.getDefaultWorkspace());
+   File logf = new File(wd,"limba.log");
+   
+   List<String> args = new ArrayList<>();
+   
+   args.add(IvyExecQuery.getJavaPath());
+   
+   File jarfile = null;
+   try {
+      Class<?> clz = Class.forName("edu.brown.cs.limbabb.bait.BaitFactory");
+      jarfile = IvyFile.getJarFile(clz);
+    }
+   catch (ClassNotFoundException e) {
+      return false;
+    }
+   
+   String xcp = baitprops.getProperty("Bait.limba.class.path");
+   if (xcp == null) {
+      xcp = System.getProperty("java.class.path");
+      String ycp = baitprops.getProperty("Bait.limba.add.path");
+      if (ycp != null) xcp = ycp + File.pathSeparator + xcp;
+    }
+   else {
+      BoardSetup setup = BoardSetup.getSetup();
+      StringBuffer buf = new StringBuffer();
+      StringTokenizer tok = new StringTokenizer(xcp,":;");
+      while (tok.hasMoreTokens()) {
+	 String elt = tok.nextToken();
+	 if (!elt.startsWith("/") &&  !elt.startsWith("\\")) {
+	    if (elt.equals("eclipsejar")) {
+	       elt = setup.getEclipsePath();
+	     }
+	    else if (elt.equals("limba.jar") && jarfile != null) {
+	       elt = jarfile.getPath();
+	     }
+	    else {
+	       String oelt = elt;
+	       elt = setup.getLibraryPath(elt);
+	       File f1 = new File(elt);
+	       if (!f1.exists()) {
+		  f1 = setup.getLibraryDirectory().getParentFile();
+		  File f2 = new File(f1,"dropins");
+		  File f3 = new File(f2,oelt);
+		  if (f3.exists()) elt = f3.getPath();
+		}
+	       BoardLog.logD("BAIT","Use class path limba element " + elt);
+	     }
+	  }
+	 if (buf.length() > 0) buf.append(File.pathSeparator);
+	 buf.append(elt);
+       }
+      xcp = buf.toString();
+    }
+   args.add("-cp");
+   args.add(xcp);
+   
+   args.add("edu.brown.cs.limba.limba.LimbaMain");
+   args.add("-m");
+   args.add(bs.getMintName());
+   args.add("-L");
+   args.add(logf.getPath());
+   if (baitprops.getBoolean("Bait.limba.debug")) {
+      args.add("-D");
+    }
+   String oh = baitprops.getProperty("Bait.ollama.host");
+   if (oh != null && !oh.isEmpty()) {
+      args.add("-host");
+      args.add(oh);
+    }
+   int op = baitprops.getInt("Bait.ollama.port");
+   if (op > 0) {
+      args.add("-port");
+      args.add(Integer.toString(op));
+    }
+   String uh = baitprops.getProperty("Bait.ollama.usehost");
+   if (uh != null && !uh.isEmpty()) {
+      args.add("-usehost");
+      args.add(uh);
+    }
+   String ah = baitprops.getProperty("Bait.ollama.althost");
+   if (ah != null && !ah.isEmpty()) {
+      args.add("-althost");
+      args.add(ah);
+    }
+   int ap = baitprops.getInt("Bait.ollama.altport");
+   if (ap > 0) {
+      args.add("-altport");
+      args.add(Integer.toString(ap));
+    }
+   String au = baitprops.getProperty("Bait.ollama.altusehost");
+   if (au != null && !au.isEmpty()) {
+      args.add("-altusehost");
+      args.add(au);
+    }  
+   String mdl = baitprops.getString("Bait.ollama.model");
+   if (mdl != null && !mdl.isEmpty()) {
+      args.add("-llama");
+      args.add(mdl);
+    }
+   
+   synchronized (this) {
+      if (limba_started || limba_running) return false; 
+      limba_started = true;
+    }
+   
+   for (int i = 0; i < 500; ++i) {
+      MintDefaultReply rply = new MintDefaultReply();
+      mc.send("<LIMBA DO='PING' />",rply,MINT_MSG_FIRST_NON_NULL);
+      String rslt = rply.waitForString(1000);
+      BoardLog.logD("BAIT","Limba ping response " + rslt);
+      if (rslt != null) {
+	 limba_running = true;
+	 break;
+       }
+      if (i == 0) {
+	 try {
+            // make IGNORE_OUTPUT to clean up otutput
+            exec = new IvyExec(args,null,IvyExec.ERROR_OUTPUT);    
+	    BoardLog.logD("BAIT","Run " + exec.getCommand());
+	  }
+	 catch (IOException e) {
+	    break;
+	  }
+       }
+      else {
+	 try {
+	    if (exec != null) {
+	       int sts = exec.exitValue();
+	       BoardLog.logD("BAIT","Limba server disappeared with status " + sts);
+	       break;
+	     }
+	  }
+	 catch (IllegalThreadStateException e) { }
+       }
+      
+      try {
+	 Thread.sleep(2000);
+       }
+      catch (InterruptedException e) { }
+    }
+   if (!limba_running) {
+      BoardLog.logE("BAIT","Unable to start limba server: " + args);
+      return false;
+    }
+   
+   return true;
+}
+
+
+/********************************************************************************/
+/*                                                                              */
+/*      Setup BIRD                                                              */
+/*                                                                              */
+/********************************************************************************/
 
 private static class BirdStarter extends Thread {
 
@@ -398,7 +634,7 @@ private static final class DummyResponder implements ResponseHandler {
 
 Element sendDiadMessage(String cmd,CommandArgs args,String cnts)
 {
-   if (!server_running) return null;
+   if (!diad_running) return null;
 
    BoardSetup bs = BoardSetup.getSetup();
    MintControl mc = bs.getMintControl();
@@ -473,7 +709,10 @@ private final class DiadMessageHandler implements MintHandler {
          switch (cmd) {
             case "PING" :
                msg.replyTo("<PONG/>");
-               break;      
+               break;    
+            case "UPDATE" :
+               handleUpdate(xml);
+               break;
             default :
                BoardLog.logE("BRID","Unknown DIAD message " + cmd);
                msg.replyTo();
@@ -502,6 +741,36 @@ private final class BirdContexter implements BaleConstants.BaleContextListener {
     }
 
 }	// end of inner class BucsContexter
+
+
+
+/********************************************************************************/
+/*                                                                              */
+/*      Debugger button for DIAD display                                        */
+/*                                                                              */
+/********************************************************************************/
+
+public static class BirdBubbleAction extends AbstractAction implements BddtConstants.BddtAuxBubbleAction {  
+   private Object launch_id; 
+   
+   private static final long serialVersionUID = 1;
+   
+   public BirdBubbleAction(Object id) {
+      launch_id = id;
+    }
+   
+   @Override public String getAuxType()             { return "Debugger Assistant"; }
+   
+   @Override public Object getLaunchId()         { return launch_id; }
+   
+   @Override public BudaBubble createBubble() {
+      BirdFactory fac = BirdFactory.getFactory();
+      BirdDebugBubble bbl = new BirdDebugBubble(fac,launch_id); 
+      fac.debug_bubbles.put(bbl,Boolean.TRUE);
+      return bbl;
+    }
+   
+}       // end of inner class BirdBubbleAction
 
 
 }      // end of class BirdFactory

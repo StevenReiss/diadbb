@@ -26,6 +26,44 @@ import org.w3c.dom.Element;
 public interface BirdConstants
 {
 
+enum DiadCandidateState {
+   INITIAL,
+   NO_SYMPTOM,
+   NO_STACK,
+   NO_ANALYSIS,
+   NO_START_FRAME,
+   NO_LOCATIONS,
+   NO_BASE_EXECUTION,
+   NO_FINAL_LOCATIONS,
+   SYMPTOM_FOUND,
+   INITIAL_LOCATIONS,
+   ANALYSIS_DONE,
+   STARTING_FRAME_FOUND,
+   BASE_EXECUTION_DONE,
+   FINAL_LOCATIONS,
+   READY,
+   DEAD,
+   INTERUPTED,
+}
+
+
+enum DiadSymptomType {
+   NONE,
+   EXCEPTION,
+   ASSERTION,
+   VARIABLE,
+   EXPRESSION,
+   LOCATION,
+   NO_EXCEPTION,
+   CAUGHT_EXCEPTION,
+}
+
+enum DiadValueOperator {
+   NONE,
+   EQL, NEQ, GTR, GEQ, LSS, LEQ,
+}
+
+
 interface ResponseHandler {
    void handleResponse(Element xml);
 }
