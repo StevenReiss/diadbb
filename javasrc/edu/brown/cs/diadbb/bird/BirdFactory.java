@@ -54,6 +54,7 @@ import edu.brown.cs.bubbles.bale.BaleConstants.BaleContextConfig;
 import edu.brown.cs.bubbles.bddt.BddtConstants;
 import edu.brown.cs.bubbles.bddt.BddtFactory;
 import edu.brown.cs.bubbles.board.BoardConstants;
+import edu.brown.cs.bubbles.board.BoardImage;
 import edu.brown.cs.bubbles.board.BoardPluginManager;
 import edu.brown.cs.bubbles.board.BoardProperties;
 import edu.brown.cs.bubbles.board.BoardSetup;
@@ -133,6 +134,11 @@ public static void initialize(BudaRoot br)
 private void setupCallbacks()
 {
    BaleFactory.getFactory().addContextListener(new BirdContexter());
+   
+   BddtFactory dfac = BddtFactory.getFactory();
+   BoardProperties birdprops = BoardProperties.getProperties("Bird");
+   boolean show = birdprops.getBoolean("Bird.show.panel");
+   dfac.addAuxButton(new BirdBubbleAction(),show);
 }
 
 
@@ -253,7 +259,7 @@ private boolean startDiad()
 {
    BoardSetup bs = BoardSetup.getSetup();
    MintControl mc = bs.getMintControl();
-   BoardProperties limbaprops = BoardProperties.getProperties("Bird");
+   BoardProperties birdprops = BoardProperties.getProperties("Bird");
 
    if (BoardSetup.getSetup().getRunMode() == BoardConstants.RunMode.CLIENT) {
       MintDefaultReply rply = new MintDefaultReply();
@@ -279,10 +285,10 @@ private boolean startDiad()
    args.add(IvyExecQuery.getJavaPath());
 
    File jarfile = IvyFile.getJarFile(BirdFactory.class);
-   String xcp = limbaprops.getProperty("Bird.diad.class.path");
+   String xcp = birdprops.getProperty("Bird.diad.class.path");
    if (xcp == null) {
       xcp = System.getProperty("java.class.path");
-      String ycp = limbaprops.getProperty("Bird.diad.add.path");
+      String ycp = birdprops.getProperty("Bird.diad.add.path");
       if (ycp != null) xcp = ycp + File.pathSeparator + xcp;
     }
    else {
@@ -319,12 +325,12 @@ private boolean startDiad()
    args.add("-cp");
    args.add(xcp);
 
-   args.add("edu.brown.cs.diad.diad.DiadMain");
+   args.add("edu.brown.cs.diad.dicontrol.DicontrolMain");
    args.add("-m");
    args.add(bs.getMintName());
    args.add("-L");
    args.add(logf.getPath());
-   if (limbaprops.getBoolean("Bird.diad.debug")) {
+   if (birdprops.getBoolean("Bird.diad.debug")) {
       args.add("-D");
     }
 
@@ -755,13 +761,20 @@ public static class BirdBubbleAction extends AbstractAction implements BddtConst
    
    private static final long serialVersionUID = 1;
    
-   public BirdBubbleAction(Object id) {
-      launch_id = id;
+   public BirdBubbleAction() {
+      super("Debugger Assistant",BoardImage.getIcon("debug/bird"));
+      launch_id = null;
     }
    
-   @Override public String getAuxType()             { return "Debugger Assistant"; }
+   @Override public BirdBubbleAction clone(Object lid) {
+      BirdBubbleAction bba = new BirdBubbleAction();
+      bba.launch_id = lid;
+      return bba;
+    }
    
-   @Override public Object getLaunchId()         { return launch_id; }
+   @Override public String getAuxType()         { return "Debugger Assistant"; }
+   
+   @Override public Object getLaunchId()        { return launch_id; }
    
    @Override public BudaBubble createBubble() {
       BirdFactory fac = BirdFactory.getFactory();

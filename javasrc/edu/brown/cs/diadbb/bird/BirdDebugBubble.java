@@ -24,6 +24,9 @@ package edu.brown.cs.diadbb.bird;
 
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Rectangle;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -31,6 +34,7 @@ import javax.swing.JTabbedPane;
 
 import edu.brown.cs.bubbles.bddt.BddtConstants;
 import edu.brown.cs.bubbles.buda.BudaBubble;
+import edu.brown.cs.ivy.swing.SwingText;
 
 class BirdDebugBubble extends BudaBubble implements BddtConstants.BddtAuxBubble, BirdConstants
 {
@@ -141,6 +145,28 @@ Object getLaunchId()                            { return launch_id; }
 
 /********************************************************************************/
 /*                                                                              */
+/*      Paint methods                                                           */
+/*                                                                              */
+/********************************************************************************/
+
+@Override public void paintComponent(Graphics g) 
+{
+   if (active_panels.isEmpty()) {
+      Graphics2D g2 = (Graphics2D) g;
+      Rectangle bnds = getBounds();
+      g.setColor(Color.LIGHT_GRAY);
+      g.drawRect(0,0,bnds.width,bnds.height);
+      SwingText.drawText("Smart Debugger Assistant",g2,bnds);
+    }
+   else {
+      super.paintComponent(g);
+    }
+}
+
+
+
+/********************************************************************************/
+/*                                                                              */
 /*      Main panel                                                              */
 /*                                                                              */
 /********************************************************************************/
@@ -152,6 +178,7 @@ private class DebugTabs extends JTabbedPane {
    DebugTabs() {
       super(JTabbedPane.TOP,JTabbedPane.SCROLL_TAB_LAYOUT);
       setMinimumSize(new Dimension(400,300));
+      setPreferredSize(new Dimension(400,300));
     }
    
 }

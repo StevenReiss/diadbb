@@ -22,9 +22,12 @@
 
 package edu.brown.cs.diadbb.bird;
 
+import java.awt.Dimension;
+
 import javax.swing.JButton;
 import javax.swing.JEditorPane;
 import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
 import edu.brown.cs.ivy.swing.SwingGridPanel;
@@ -43,7 +46,7 @@ private BirdInstance    for_instance;
 private JTextField      symptom_text;
 private JTextField      state_text;
 private JEditorPane     log_pane;
-private JEditorPane     input_area;
+private JTextArea       input_area;
 private JButton         symptom_btn;
 private JButton         locations_btn;
 private JButton         repairs_btn;
@@ -132,13 +135,13 @@ private void setupPanel()
    addSeparator();
    
    log_pane = new JEditorPane("text/html","");
+   
    JScrollPane outrgn = new JScrollPane(log_pane,
          JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
          JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
    addLabellessRawComponent("Log",outrgn);
    
-   input_area = new JEditorPane("text/plain","");
-   input_area.setEditable(true);
+   input_area = addTextArea("Query","",1,40,null);
    JScrollPane inregion = new JScrollPane(input_area,
          JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
          JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
@@ -151,6 +154,8 @@ private void setupPanel()
    repairs_btn = addBottomButton("Find Repairs","FIX",true,null);
    explain_btn = addBottomButton("Explain","EXPLAIN",true,null);
    addBottomButtons();
+   
+   setMinimumSize(new Dimension(400,250));
 }
 
 }       // end of class BirdDebugPanel
