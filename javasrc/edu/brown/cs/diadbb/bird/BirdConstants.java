@@ -43,7 +43,7 @@ enum DiadCandidateState {
    FINAL_LOCATIONS,
    READY,
    DEAD,
-   INTERUPTED,
+   INTERRUPTED, 
 }
 
 

@@ -27,9 +27,11 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
+import java.awt.event.MouseEvent;
 import java.util.HashMap;
 import java.util.Map;
 
+import javax.swing.JPopupMenu;
 import javax.swing.JTabbedPane;
 
 import edu.brown.cs.bubbles.bddt.BddtConstants;
@@ -145,22 +147,20 @@ Object getLaunchId()                            { return launch_id; }
 
 /********************************************************************************/
 /*                                                                              */
-/*      Paint methods                                                           */
+/*      Menu methods                                                             */
 /*                                                                              */
 /********************************************************************************/
 
-@Override public void paintComponent(Graphics g) 
+@Override public void handlePopupMenu(MouseEvent e)
 {
-   if (active_panels.isEmpty()) {
-      Graphics2D g2 = (Graphics2D) g;
-      Rectangle bnds = getBounds();
-      g.setColor(Color.LIGHT_GRAY);
-      g.drawRect(0,0,bnds.width,bnds.height);
-      SwingText.drawText("Smart Debugger Assistant",g2,bnds);
+   JPopupMenu menu = new JPopupMenu();
+   if (!active_panels.isEmpty()) {
+      BirdDebugPanel pnl = (BirdDebugPanel) debug_tabs.getSelectedComponent();
+      pnl.addPopupButtons(menu);
     }
-   else {
-      super.paintComponent(g);
-    }
+    
+   menu.add(getFloatBubbleAction());
+   menu.show(this,e.getX(),e.getY());
 }
 
 
@@ -181,7 +181,21 @@ private class DebugTabs extends JTabbedPane {
       setPreferredSize(new Dimension(400,300));
     }
    
-}
+   @Override public void paint(Graphics g) {
+      if (active_panels.isEmpty()) {
+         Graphics2D g2 = (Graphics2D) g;
+         Rectangle bnds = getBounds();
+         g.setColor(Color.LIGHT_GRAY);
+         g.drawRect(0,0,bnds.width,bnds.height);
+         g.setColor(Color.BLACK);
+         SwingText.drawText("Smart Debugger Assistant",g2,bnds);
+       }
+      else {
+         super.paint(g);
+       }
+    }
+   
+}       // end of inner class DebugTabs
 
 
 

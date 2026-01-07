@@ -26,6 +26,7 @@ import java.awt.Color;
 
 import org.w3c.dom.Element;
 
+import edu.brown.cs.bubbles.board.BoardColors;
 import edu.brown.cs.ivy.xml.IvyXml;
 
 class BirdInstance implements BirdConstants
@@ -71,27 +72,121 @@ DiadCandidateState getState()
 
 String getTitle()
 {
+   Element thrd = IvyXml.getChild(instance_xml,"THREAD");
+   String name = IvyXml.getAttrString(thrd,"NAME");
+   if (name != null && !name.isEmpty()) return name;
+   
    return getId();
 }
 
+
 String getLocationString()
 {
-   return "line @ method";
+   Element frm = IvyXml.getChild(instance_xml,"FRAME");
+   String cnm = IvyXml.getAttrString(frm,"CLASS");
+   String mnm = IvyXml.getAttrString(frm,"METHOD");
+   String line = IvyXml.getAttrString(frm,"LINE");
+   
+   if (cnm != null && !cnm.isEmpty()) {
+      cnm = getShortName(cnm) + ".";
+    }
+   else cnm = "";
+   if (line != null && !line.isEmpty()) {
+      line = line + " @ ";
+    }
+   else line = "";
+   
+   return line + cnm + mnm;
 }
 
 
 String getSymptomString()
 {
+   Element symp = IvyXml.getChild(instance_xml,"SYMPTOM");
+   DiadSymptomType typ = IvyXml.getAttrEnum(symp,"TYPE",DiadSymptomType.NONE);
+   String itm = IvyXml.getTextElement(symp,"ITEM");
+   String orig = IvyXml.getTextElement(symp,"ORIGINAL");
+   String tgt = IvyXml.getTextElement(symp,"TARGET");
+   DiadValueOperator op = IvyXml.getAttrEnum(symp,"OPERATOR",DiadValueOperator.NONE);
+   double prec = IvyXml.getAttrDouble(symp,"PRECISION",0);
+   
+   switch (typ) {
+      case NONE :
+         return "No Symptom Found";
+      case CAUGHT_EXCEPTION : 
+      case EXCEPTION :
+         return "Exception " + getShortName(itm) + " was thrown";
+      case ASSERTION :
+         String cnts = null;
+         if (op != DiadValueOperator.NONE && orig != null && tgt != null) {
+            String ops = op.toString();
+            if (prec != 0) ops = "~" + ops;
+            cnts = orig + " " + ops + " " + tgt;
+          }
+         else if (orig != null) {
+            cnts = orig;
+          }
+         if (cnts == null) return "Assertion failed";
+         else return "Assertion failed: " + cnts;
+      case VARIABLE :
+         return "Variable " + itm + " = " + orig + ", should be " + tgt;
+      case EXPRESSION :
+         return "Expression " + itm + " = " + orig + ", should be " + tgt;
+      case LOCATION :
+         return "Execution should not be here";
+      case NO_EXCEPTION :
+         return "Exception " + getShortName(itm) + " should have been thrown";
+    }
    return "SYMPTOM";
 }
 
 
 Color getTabColor()
 {
-   return null;
+   Color c = Color.WHITE;
+   switch (getState()) {
+      default :
+      case INITIAL :
+      case NO_SYMPTOM :
+      case SYMPTOM_FOUND :
+      case INITIAL_LOCATIONS :
+      case ANALYSIS_DONE :
+      case STARTING_FRAME_FOUND :
+      case BASE_EXECUTION_DONE :
+      case FINAL_LOCATIONS :
+      case READY :
+         String vl = getState().toString().toLowerCase();
+         c = BoardColors.getColor("Bird.tab." + vl);
+         break;
+      case NO_STACK :
+      case NO_ANALYSIS :
+      case NO_START_FRAME :
+      case NO_LOCATIONS :
+      case NO_BASE_EXECUTION :
+      case NO_FINAL_LOCATIONS :
+      case DEAD :
+      case INTERRUPTED :
+         c = Color.RED;
+         break;
+    }
+   c = BoardColors.getPaleColor(c);
+   
+   return c;
 }
 
 
+
+private String getShortName(String nm)
+{
+   if (nm == null) return null;
+   int idx = nm.lastIndexOf(".");
+   if (idx >= 0) {
+      nm = nm.substring(idx+1);
+    }
+   return nm;
+         
+   
+}
 /********************************************************************************/
 /*                                                                              */
 /*      Update methods                                                          */
@@ -102,7 +197,7 @@ boolean shouldRemove()
 {
    switch (getState()) {
       case DEAD :
-      case INTERUPTED :
+      case INTERRUPTED :
          return true;
     }
    

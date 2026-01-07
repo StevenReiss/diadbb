@@ -23,13 +23,18 @@
 package edu.brown.cs.diadbb.bird;
 
 import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.event.ActionEvent;
 
+import javax.swing.AbstractAction;
 import javax.swing.JButton;
 import javax.swing.JEditorPane;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
+import edu.brown.cs.bubbles.board.BoardColors;
 import edu.brown.cs.ivy.swing.SwingGridPanel;
 
 class BirdDebugPanel extends SwingGridPanel implements BirdConstants
@@ -64,6 +69,7 @@ private static final long serialVersionUID = 1;
 BirdDebugPanel(BirdInstance bi)
 {
    for_instance = bi;
+   BoardColors.setColors(this,BoardColors.getColor("Bird.panel.background"));
    setupPanel();
 }
 
@@ -113,6 +119,21 @@ void dispose()
 
 /********************************************************************************/
 /*                                                                              */
+/*      Handle menu buttons                                                     */
+/*                                                                              */
+/********************************************************************************/
+
+void addPopupButtons(JPopupMenu menu)
+{
+   menu.add(new SymptomAction());
+   menu.add(new ParameterAction());
+   menu.add(new StartFrameAction());
+}
+
+
+
+/********************************************************************************/
+/*                                                                              */
 /*      Initialize the panel                                                    */
 /*                                                                              */
 /********************************************************************************/
@@ -135,28 +156,98 @@ private void setupPanel()
    addSeparator();
    
    log_pane = new JEditorPane("text/html","");
+   log_pane.setMinimumSize(new Dimension(300,200));
    
    JScrollPane outrgn = new JScrollPane(log_pane,
          JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
          JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+// outrgn.setMinimumSize(new Dimension(300,300));
    addLabellessRawComponent("Log",outrgn);
    
    input_area = addTextArea("Query","",1,40,null);
-   JScrollPane inregion = new JScrollPane(input_area,
-         JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
-         JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-   addRawComponent("Query",inregion);
+   input_area.setText("");
+// input_area.setMinimumSize(new Dimension(300,30));
    
    addSeparator();
    
    symptom_btn = addBottomButton("Edit Symptom","SYMP",true,null);
-   locations_btn = addBottomButton("Show Locations","LOCS",true,null);
-   repairs_btn = addBottomButton("Find Repairs","FIX",true,null);
+   locations_btn = addBottomButton("Locations","LOCS",true,null);
+   repairs_btn = addBottomButton("Repairs","FIX",true,null);
    explain_btn = addBottomButton("Explain","EXPLAIN",true,null);
    addBottomButtons();
    
    setMinimumSize(new Dimension(400,250));
 }
+
+
+/********************************************************************************/
+/*                                                                              */
+/*      Painting methods                                                        */
+/*                                                                              */
+/********************************************************************************/
+
+@Override public void paintComponent(Graphics g)
+{
+// Graphics2D g2 = (Graphics2D) g.create();
+// Dimension d = getSize();
+// BoardColors.setColors(this,getBackground());
+// g2.setBackground(getBackground());
+// g2.clearRect(0,0,d.width,d.height);
+   
+   super.paintComponent(g);
+}
+
+
+
+/********************************************************************************/
+/*                                                                              */
+/*      Menu actions                                                            */
+/*                                                                              */
+/********************************************************************************/
+
+private final class ParameterAction extends AbstractAction {
+   
+   private static final long serialVersionUID = 1;
+   
+   ParameterAction() {
+      super("Set Diad Parameters");
+    }
+   
+   @Override public void actionPerformed(ActionEvent evt) {
+    }
+   
+}       // end of inner class ParameterAction
+
+
+private final class StartFrameAction extends AbstractAction {
+   
+   private static final long serialVersionUID = 1;
+ 
+   StartFrameAction() {
+      super("Choose Execution Frame");
+    }
+   
+   @Override public void actionPerformed(ActionEvent evt) {
+    }
+   
+}       // end of inner class StartFrameAction
+
+
+private final class SymptomAction extends AbstractAction {
+   
+   private static final long serialVersionUID = 1;
+   
+   SymptomAction() {
+      super("Change Error Symptom");
+    }
+   
+   @Override public void actionPerformed(ActionEvent evt) {
+    }
+   
+}       // end of inner class StartFrameAction
+
+
+
 
 }       // end of class BirdDebugPanel
 

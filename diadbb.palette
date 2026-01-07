@@ -1,2 +1,13 @@
-Bird.SolutionTopColor	:	0xf0d0a0
+Bird.tab.initial	:	white
+Bird.tab.no_symptom	:	blue
+Bird.tab.symptom_found	:	cyan
+Bird.tab.initial_locations :	yellow4
+Bird.tab.analysis_done	:	yellow3
+Bird.tab.starting_frame_found : yellow2
+Bird.tab.base_execution_done :	yellow1
+Bird.tab.final_locations :	yellowgreen
+Bird.tab.ready		:	green
+Bird.panel.background	:	#404db7e5
+
+
 
