@@ -224,6 +224,12 @@ private void handleUpdate(Element xml)
 }
 
 
+void removeInstance(BirdInstance binst)
+{
+   instance_map.remove(binst.getId());
+}
+
+
 private BirdDebugBubble findBubble(Element xml)
 {
    Element thrd = IvyXml.getChild(xml,"THREAD");
