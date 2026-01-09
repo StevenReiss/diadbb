@@ -41,6 +41,7 @@ import java.util.Map;
 import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
+import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
@@ -48,6 +49,7 @@ import javax.swing.JTabbedPane;
 import javax.swing.plaf.basic.BasicButtonUI;
 
 import edu.brown.cs.bubbles.bddt.BddtConstants;
+import edu.brown.cs.bubbles.board.BoardLog;
 import edu.brown.cs.bubbles.buda.BudaBubble;
 import edu.brown.cs.ivy.swing.SwingText;
 
@@ -117,8 +119,19 @@ void updateDebugInstance(BirdInstance bi)
    if (idx >= 0) {
       Color c = bi.getTabColor(); 
       if (c !=  null) {
+         debug_tabs.setBackgroundAt(idx,c);
+         BoardLog.logD("BIRD","Change background " + idx + " " + c);
          ButtonTabComponent tab = (ButtonTabComponent) debug_tabs.getTabComponentAt(idx);
-         if (tab != null) tab.setBackground(c);
+         if (tab != null) {
+            tab.setBackground(c);
+            Container cont = tab.getParent();
+            if (cont instanceof JComponent) {
+               JComponent jc = (JComponent) cont;
+               jc.setBackground(c);
+//             jc.setOpaque(true);
+             }
+            BoardLog.logD("BIRD","Change tab color " + c);
+          }
        }
     }
    
@@ -131,6 +144,7 @@ void removeDebugInstance(BirdInstance bi)
    
    int i = findPanelIndex(pn);
    if (i >= 0) {
+      BoardLog.logD("BIRD","Removing tab " + i);
       debug_tabs.removeTabAt(i);
       pn.dispose(); 
     }
@@ -141,11 +155,14 @@ void removeDebugInstance(BirdInstance bi)
 private int findPanelIndex(BirdDebugPanel pnl)
 {
    for (int i = 0; i < debug_tabs.getTabCount(); ++i) {
-      BirdDebugPanel c = (BirdDebugPanel) debug_tabs.getTabComponentAt(i);
+      BirdDebugPanel c = (BirdDebugPanel) debug_tabs.getComponentAt(i);
       if (c == pnl) {
          return i;
        }
     }
+   
+   BoardLog.logD("BIRD","Can't find debug panel for " +
+         pnl.getInstance().getId());
    
    return -1;
 }
@@ -160,6 +177,13 @@ private int findPanelIndex(BirdDebugPanel pnl)
 @Override public String getAuxType()            { return "DebuggerAssistant"; }
 
 Object getLaunchId()                            { return launch_id; }
+
+boolean isIdRelevant(String id) 
+{
+   if (active_panels.get(id) != null) return true;
+   
+   return false;
+}
 
 
 
@@ -200,12 +224,15 @@ private class DebugTabs extends JTabbedPane {
     }
    
    @Override public void paint(Graphics g) {
+      BoardLog.logD("BIRD","Paint debug tabs " + active_panels.size());
       if (active_panels.isEmpty()) {
          Graphics2D g2 = (Graphics2D) g;
          Rectangle bnds = getBounds();
-         g.setColor(Color.LIGHT_GRAY);
-         g.drawRect(0,0,bnds.width,bnds.height);
-         g.setColor(Color.BLACK);
+         BoardLog.logD("BIRD","Draw empty panel " + bnds + " " + isOpaque());
+         g2.setColor(Color.LIGHT_GRAY);
+         g2.setBackground(Color.LIGHT_GRAY);
+         g2.drawRect(0,0,bnds.width,bnds.height);
+         g2.setColor(Color.BLACK);
          SwingText.drawText("Smart Debugger Assistant",g2,bnds);
        }
       else {
@@ -232,7 +259,7 @@ private final class ButtonTabComponent extends JPanel {
       //unset default FlowLayout' gaps
       super(new FlowLayout(FlowLayout.LEFT, 0, 0));
       
-      setOpaque(false);
+      setOpaque(true);
       
       JLabel label = new ButtonTabLabel(pnl);
       //make JLabel read titles from JTabbedPane
@@ -248,9 +275,6 @@ private final class ButtonTabComponent extends JPanel {
       BirdInstance bi = pnl.getInstance();
       setBackground(bi.getTabColor());
     }
-   
- 
-
     
 }
 
@@ -269,6 +293,7 @@ private class ButtonTabLabel extends JLabel {
    @Override public void paint(Graphics g) {
       Container comp = getParent();
       setBackground(comp.getBackground());
+      BoardLog.logD("BIRD","Button tab paint " + comp.getBackground());
       super.paint(g);
     }
    

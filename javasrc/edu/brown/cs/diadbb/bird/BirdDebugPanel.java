@@ -48,6 +48,7 @@ class BirdDebugPanel extends SwingGridPanel implements BirdConstants
 /********************************************************************************/
 
 private BirdInstance    for_instance;
+private JTextField      location_text;
 private JTextField      symptom_text;
 private JTextField      state_text;
 private JEditorPane     log_pane;
@@ -94,6 +95,7 @@ BirdInstance getInstance()
 
 void updateInstance()
 {
+   location_text.setText(for_instance.getLocationString());
    symptom_text.setText(for_instance.getSymptomString());
    state_text.setText(for_instance.getState().toString());
    
@@ -153,9 +155,9 @@ void addPopupButtons(JPopupMenu menu)
 private void setupPanel()
 {
    beginLayout();
-   JTextField loc = addTextField("Location",for_instance.getLocationString(),
+   location_text = addTextField("Location",for_instance.getLocationString(),
          null,null); 
-   loc.setEditable(false);
+   location_text.setEditable(false);
    
    state_text = addTextField("State",for_instance.getState().toString(),
          null,null); 
@@ -182,7 +184,7 @@ private void setupPanel()
    
    addSeparator();
    
-   symptom_btn = addBottomButton("Edit Symptom","SYMP",true,null);
+   symptom_btn = addBottomButton("Symptom","SYMP",true,null);
    locations_btn = addBottomButton("Locations","LOCS",true,null);
    repairs_btn = addBottomButton("Repairs","FIX",true,null);
    explain_btn = addBottomButton("Explain","EXPLAIN",true,null);

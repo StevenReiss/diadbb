@@ -83,6 +83,10 @@ String getTitle()
 String getLocationString()
 {
    Element frm = IvyXml.getChild(instance_xml,"FRAME");
+   if (frm == null) {
+      return "<TBD>";
+    }
+   
    String cnm = IvyXml.getAttrString(frm,"CLASS");
    String mnm = IvyXml.getAttrString(frm,"METHOD");
    String line = IvyXml.getAttrString(frm,"LINE");
@@ -95,6 +99,8 @@ String getLocationString()
       line = line + " @ ";
     }
    else line = "";
+   
+   if (mnm == null) mnm = "<TBD>";
    
    return line + cnm + mnm;
 }

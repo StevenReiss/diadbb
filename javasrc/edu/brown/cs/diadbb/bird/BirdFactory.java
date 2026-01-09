@@ -195,14 +195,21 @@ private void handleUpdate(Element xml)
    if (IvyXml.isElement(xml,"DIADREPLY")) {
       xml = IvyXml.getChild(xml,"CANDIDATE");
     }
+   String id = IvyXml.getAttrString(xml,"ID");
    
    BirdDebugBubble bbl = findBubble(xml);
+   if (bbl == null) {
+      BoardLog.logD("BIRD","Can't find debug bubble for candidate " + id);
+    }
    
-   String id = IvyXml.getAttrString(xml,"ID");
    BirdInstance binst = instance_map.get(id);
    if (binst == null) {
+      BoardLog.logD("BIRD","Need to create a new instance for " + id);
       binst = new BirdInstance(xml);
-      if (binst.shouldRemove()) return; 
+      if (binst.shouldRemove()) {
+         BoardLog.logD("BIRD","Instance is not needed");
+         return; 
+       }
       instance_map.put(id,binst);
       if (bbl != null) {
          bbl.addDebugInstance(binst);
@@ -215,6 +222,8 @@ private void handleUpdate(Element xml)
        }
     } 
    
+   BoardLog.logD("BIRD","Check remove " + binst.getId() + " " + 
+         binst.getState() + " " + binst.shouldRemove());
    if (binst.shouldRemove()) {
       instance_map.remove(id);
       if (bbl != null) {
@@ -232,9 +241,13 @@ void removeInstance(BirdInstance binst)
 
 private BirdDebugBubble findBubble(Element xml)
 {
+   String bid = IvyXml.getAttrString(xml,"ID");
    Element thrd = IvyXml.getChild(xml,"THREAD");
    String tid = IvyXml.getAttrString(thrd,"ID");
    for (BirdDebugBubble bbl : debug_bubbles.keySet()) {
+      if (bbl.isIdRelevant(bid)) { 
+         return bbl;
+       }
       if (BddtFactory.getFactory().isThreadRelevant(bbl.getLaunchId(),tid)) { 
          return bbl; 
        }
@@ -724,6 +737,7 @@ private final class DiadMessageHandler implements MintHandler {
                break;    
             case "UPDATE" :
                handleUpdate(xml);
+               msg.replyTo();
                break;
             default :
                BoardLog.logE("BRID","Unknown DIAD message " + cmd);
