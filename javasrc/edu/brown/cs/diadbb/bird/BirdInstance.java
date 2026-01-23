@@ -129,6 +129,9 @@ String getSymptomString()
             if (prec != 0) ops = "~" + ops;
             cnts = orig + " " + ops + " " + tgt;
           }
+         else if (itm != null) {
+            cnts = itm;
+          }
          else if (orig != null) {
             cnts = orig;
           }

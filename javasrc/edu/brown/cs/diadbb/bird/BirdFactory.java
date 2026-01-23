@@ -115,7 +115,7 @@ public static void initialize(BudaRoot br)
 {
    if (!BumpClient.getBump().getOptionBool("bubbles.useDiad")) return;
 
-   BoardLog.logD("BIRD","USING LIMBA");
+   BoardLog.logD("BIRD","USING DIAD");
 
    switch (BoardSetup.getSetup().getRunMode()) {
       case NORMAL :
@@ -705,16 +705,16 @@ private final class DiadReplyHandler implements MintHandler {
       String rid = args.getArgument(0);
       String rslt = null;
       try {
-	 BoardLog.logD("BIRD","Handle deferred reply " + rid + " " +
-	       IvyXml.convertXmlToString(xml));
-	 ResponseHandler hdlr = hdlr_map.remove(rid);
-	 if (hdlr != null) {
-	    Element xmlrslt = IvyXml.getChild(xml,"RESULT");
-	    hdlr.handleResponse(xmlrslt);
-	  }
+         BoardLog.logD("BIRD","Handle deferred reply " + rid + " " +
+               IvyXml.convertXmlToString(xml));
+         ResponseHandler hdlr = hdlr_map.remove(rid);
+         if (hdlr != null) {
+            Element xmlrslt = IvyXml.getChild(xml,"RESULT");
+            hdlr.handleResponse(xmlrslt);
+          }
        }
       catch (Throwable e) {
-	 BoardLog.logE("BIRD","Error processing command",e);
+         BoardLog.logE("BIRD","Error processing command",e);
        }
       msg.replyTo(rslt);
    }
