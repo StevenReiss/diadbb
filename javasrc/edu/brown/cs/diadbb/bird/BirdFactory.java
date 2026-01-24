@@ -638,6 +638,9 @@ void issueXmlCommand(String cmd,CommandArgs args,String body,ResponseHandler hdl
    else args.put("RID",rid);
 
    Element xml = sendDiadMessage(cmd,args,body);
+   if (xml == null) {
+      hdlr.handleResponse(null);
+    }
    String nrid = IvyXml.getAttrString(xml,"RID");
    if (!rid.equals(nrid)) {
       BoardLog.logE("BIRD","Reply ids don't match " + rid + " " + nrid);

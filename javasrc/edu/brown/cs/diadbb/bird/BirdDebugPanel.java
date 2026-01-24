@@ -34,6 +34,7 @@ import javax.swing.JLabel;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
 import javax.swing.text.html.HTMLDocument;
 import javax.swing.text.html.HTMLEditorKit;
 
@@ -43,6 +44,7 @@ import edu.brown.cs.bubbles.board.BoardColors;
 import edu.brown.cs.bubbles.board.BoardLog;
 import edu.brown.cs.ivy.mint.MintConstants.CommandArgs;
 import edu.brown.cs.ivy.swing.SwingGridPanel;
+import edu.brown.cs.ivy.swing.SwingWrappingEditorPane;
 import edu.brown.cs.ivy.xml.IvyXml;
 
 class BirdDebugPanel extends SwingGridPanel implements BirdConstants
@@ -66,6 +68,7 @@ private JButton         locations_btn;
 private JButton         repairs_btn;
 private JButton         explain_btn;
 private JButton         submit_btn;
+private boolean         doing_query;
 
 private static final long serialVersionUID = 1;
 
@@ -80,6 +83,7 @@ BirdDebugPanel(BirdInstance bi)
 {
    for_instance = bi;
    BoardColors.setColors(this,BoardColors.getColor("Bird.panel.background"));
+   doing_query = false;
    setupPanel();
 }
 
@@ -104,29 +108,39 @@ BirdInstance getInstance()
 
 void updateInstance()
 {
+   if (symptom_text == null) return;
+   
    location_text.setText(for_instance.getLocationString());
    symptom_text.setText(for_instance.getSymptomString());
    state_text.setText(for_instance.getState().toString());
+   state_text.setBackground(for_instance.getTabColor());
    
-   symptom_btn.setEnabled(false);
+   if (submit_btn == null) return;
+   
    locations_btn.setEnabled(false);
    repairs_btn.setEnabled(false);
    explain_btn.setEnabled(false);
+   submit_btn.setEnabled(false);
+   if (symptom_btn != null) symptom_btn.setEnabled(false);
+   
+   BoardLog.logD("BIRD","Update instance " + doing_query + " " + for_instance.getState());
+   
+   if (doing_query) return;
    
    switch (for_instance.getState()) {
       default :
          break; 
       case NO_SYMPTOM :
       case SYMPTOM_FOUND :
-         symptom_btn.setEnabled(true);
+         if (symptom_btn != null) symptom_btn.setEnabled(true);
          break;
 
-
       case READY :
-         symptom_btn.setEnabled(true);
+         if (symptom_btn != null) symptom_btn.setEnabled(true);
          locations_btn.setEnabled(true);
          repairs_btn.setEnabled(true);
          explain_btn.setEnabled(true);
+         submit_btn.setEnabled(true);
          break;
     }
 }
@@ -176,28 +190,31 @@ private void setupPanel()
    
    addSeparator();
    
-   log_pane = new JEditorPane("text/html","");
+   log_pane = new SwingWrappingEditorPane("text/html","");
    log_pane.setMinimumSize(new Dimension(300,100));
    
    JScrollPane outrgn = new JScrollPane(log_pane,
          JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
          JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-// outrgn.setMinimumSize(new Dimension(300,300));
+   outrgn.setMinimumSize(new Dimension(300,100));
+   outrgn.setPreferredSize(new Dimension(300,200));
    addLabellessRawComponent("Log",outrgn,true,true);
    
    SwingGridPanel inp = new SwingGridPanel();
    inp.addGBComponent(new JLabel("Enter Query"),0,0,1,1,10,0);
-   input_area = new JEditorPane("text/plain","");
-   input_area.setEditable(true);
    submit_btn = new JButton("SUBMIT");
    submit_btn.addActionListener(new SubmitAction());
    inp.addGBComponent(submit_btn,1,0,1,1,0,0);
+   input_area = new SwingWrappingEditorPane("text/plain","");
+   input_area.setEditable(true);
    JScrollPane inregion = new JScrollPane(input_area,
          JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
          JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
    inp.addGBComponent(inregion,0,1,0,1,10,10);
-   inp.setMinimumSize(new Dimension(300,100));
-   addLabellessRawComponent("Query",inp,true,false);
+   inp.setMinimumSize(new Dimension(300,75));
+   inp.setPreferredSize(new Dimension(300,100));
+   inp.setMaximumSize(new Dimension(300,150));
+   addLabellessRawComponent("Query",inp,true,true);
    
    addSeparator();
    
@@ -244,6 +261,7 @@ private void appendOutput(String s)
    try {
       HTMLEditorKit kit = (HTMLEditorKit) log_pane.getEditorKit(); 
       HTMLDocument doc = (HTMLDocument) log_pane.getDocument();
+      log_pane.setCaretPosition(doc.getLength());
       kit.insertHTML(doc,doc.getLength(),s,
             0,0,null);
     }
@@ -271,6 +289,10 @@ private String formatText(String text)
        }
       else {
          idx3 = ntext.indexOf("\n",idx2);
+         if (idx3 < 0) {
+            ntext += "\n";
+            idx3 = ntext.length();
+          }
        }
       
       String quote = ntext.substring(idx1,idx2);
@@ -411,7 +433,13 @@ private final class SubmitAction implements ActionListener {
 }       // end of inner class SubmitAction
 
 
-private final class Responder implements ResponseHandler {
+private final class Responder implements ResponseHandler, Runnable {
+   
+   private String display_text;
+   
+   Responder() {
+      display_text = null;
+    }
    
    @Override public void handleResponse(Element xml) { 
       Element rslt = xml;
@@ -425,10 +453,16 @@ private final class Responder implements ResponseHandler {
          text = "???";
        }
       
-      text = formatText(text);
+      display_text = formatText(text);
       
-      String disp = "<div align='left'><p><font color='black'>" + text +
-            "</font></p></div>";
+      SwingUtilities.invokeLater(this);
+    }
+   
+   @Override public void run() {
+      doing_query = false;
+      updateInstance();
+      String disp = "<div align='left'><p><font color='black'>" + display_text +
+         "</font></p></div>";
       appendOutput(disp);    
     }
 
@@ -450,6 +484,8 @@ private final class AskLimbaCommand extends Thread {
        CommandArgs args = new CommandArgs("DEBUGID",for_instance.getId(),
              "TYPE",query_type);
        String what = (query_value == null ? null : "QUESTION");
+       doing_query = true;
+       updateInstance();
        BirdFactory.getFactory().issueCommand("ASKLIMBA",args,
              what,query_value,new Responder());
      }

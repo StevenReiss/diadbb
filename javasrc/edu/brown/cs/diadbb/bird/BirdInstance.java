@@ -116,6 +116,28 @@ String getSymptomString()
    DiadValueOperator op = IvyXml.getAttrEnum(symp,"OPERATOR",DiadValueOperator.NONE);
    double prec = IvyXml.getAttrDouble(symp,"PRECISION",0);
    
+   String ops = op.toString();
+   switch (op) {
+      case EQL : 
+         ops = "==";
+         break;
+      case GEQ :
+         ops = ">=";
+         break;
+      case GTR :
+         ops = ">";
+         break;
+      case LEQ : 
+         ops = "<=";
+         break;
+      case LSS :
+         ops = "<";
+         break;
+      case NEQ :
+         ops = "!=";
+         break;
+    }
+   
    switch (typ) {
       case NONE :
          return "No Symptom Found";
@@ -125,7 +147,6 @@ String getSymptomString()
       case ASSERTION :
          String cnts = null;
          if (op != DiadValueOperator.NONE && orig != null && tgt != null) {
-            String ops = op.toString();
             if (prec != 0) ops = "~" + ops;
             cnts = orig + " " + ops + " " + tgt;
           }
