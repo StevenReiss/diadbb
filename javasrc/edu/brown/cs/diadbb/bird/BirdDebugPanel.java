@@ -160,7 +160,10 @@ void dispose()
 
 void addPopupButtons(JPopupMenu menu)
 {
-   menu.add(new SymptomAction());
+   DiadCandidateState state = for_instance.getState();
+   if (state != DiadCandidateState.INITIAL) {
+      menu.add(new SymptomAction());
+    }
    menu.add(new ParameterAction());
    menu.add(new StartFrameAction());
 }
