@@ -64,7 +64,7 @@ private JTextField      state_text;
 private JEditorPane     log_pane;
 private JEditorPane     input_area;
 private JButton         symptom_btn;
-private JButton         locations_btn;
+private JButton         locations_btn; 
 private JButton         repairs_btn;
 private JButton         explain_btn;
 private JButton         submit_btn;
