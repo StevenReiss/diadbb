@@ -130,8 +130,8 @@ void updateInstance()
    switch (for_instance.getState()) {
       default :
          break; 
-      case NO_SYMPTOM :
-      case SYMPTOM_FOUND :
+      case NO_SYMPTOM_FOUND :
+      case DOING_ANALYSIS :
          if (symptom_btn != null) symptom_btn.setEnabled(true);
          break;
 
@@ -301,7 +301,7 @@ private String formatText(String text)
       String quote = ntext.substring(idx1,idx2);
       String pre = ntext.substring(0,idx0);
       String post = ntext.substring(idx3);
-      ntext = pre + "<pre><code>\n" + quote + "\n" + post;
+      ntext = pre + "<pre><code>\n" + quote + "\n</code></pre>" + post;
     }
    
    return ntext;
@@ -424,14 +424,14 @@ private final class SubmitAction implements ActionListener {
    @Override public void actionPerformed(ActionEvent evt) {
       String text = input_area.getText();
       if (text.isBlank()) return;
-      AskLimbaCommand cmd = new AskLimbaCommand("LOCATIONS",text);
-      cmd.start(); 
+      AskLimbaCommand cmd = new AskLimbaCommand("USER",text);
       String disp = "<div align='right'><p style='text-indent: 50px;'><font color='blue'>" + text + 
                   "</font></p></div>";
       appendOutput(disp);
-      
       input_area.setText("");
-    }
+      
+      cmd.start(); 
+     }
    
 }       // end of inner class SubmitAction
 

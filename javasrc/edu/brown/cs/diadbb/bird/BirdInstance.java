@@ -177,21 +177,22 @@ Color getTabColor()
    switch (getState()) {
       default :
       case INITIAL :
-      case NO_SYMPTOM :
-      case SYMPTOM_FOUND :
-      case INITIAL_LOCATIONS :
-      case ANALYSIS_DONE :
-      case STARTING_FRAME_FOUND :
-      case BASE_EXECUTION_DONE :
-      case FINAL_LOCATIONS :
+      case FINDING_SYMPTOM :
+      case NO_SYMPTOM_FOUND :
+      case DOING_ANALYSIS :
+      case FINDING_ALL_LOCATIONS:
+      case FINDING_STARTING_FRAME :
+      case DOING_BASE_EXECUTION :
+      case FINDING_EXECUTED_LOCATIONS :
+      case PREPARING_DATA :
       case READY :
          String vl = getState().toString().toLowerCase();
          c = BoardColors.getColor("Bird.tab." + vl);
          break;
-      case NO_STACK :
+      case NO_USER_STACK :
       case NO_ANALYSIS :
       case NO_START_FRAME :
-      case NO_LOCATIONS :
+      case NO_LOCATIONS_FOUND :
       case NO_BASE_EXECUTION :
       case NO_FINAL_LOCATIONS :
       case DEAD :
@@ -227,7 +228,7 @@ boolean shouldRemove()
 {
    switch (getState()) {
       case DEAD :
-      case INTERRUPTED :
+      case INTERRUPTED :  
          return true;
     }
    

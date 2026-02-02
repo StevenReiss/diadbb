@@ -328,11 +328,21 @@ private boolean startDiad()
 	       elt = setup.getLibraryPath(elt);
 	       File f1 = new File(elt);
 	       if (!f1.exists()) {
-		  f1 = setup.getLibraryDirectory().getParentFile();
-		  File f2 = new File(f1,"dropins");
+		  File f0 = setup.getLibraryDirectory().getParentFile();
+		  File f2 = new File(f0,"dropins");
 		  File f3 = new File(f2,oelt);
-		  if (f3.exists()) elt = f3.getPath();
+                  if (f3.exists()) {
+                     f1 = f3;
+                     elt = f3.getPath();
+                   }
 		}
+               if (!f1.exists()) {
+                  File f4 = new File("/pro/diad/diad.jar");
+                  if (f4.exists()) {
+                     f1 = f4;
+                     elt = f4.getPath();
+                   }
+                }
 	       BoardLog.logD("BIRD","Use class path diad element " + elt);
 	     }
 	  }
@@ -429,6 +439,7 @@ private boolean startLimba()
    IvyExec exec = null;
    File wd =  new File(bs.getDefaultWorkspace());
    File logf = new File(wd,"limba.log");
+   File transf = new File(wd,"limbatrans.html");
    
    List<String> args = new ArrayList<>();
    
@@ -488,6 +499,8 @@ private boolean startLimba()
    args.add(bs.getMintName());
    args.add("-L");
    args.add(logf.getPath());
+   args.add("-T");
+   args.add(transf.getPath());
    if (baitprops.getBoolean("Bait.limba.debug")) {
       args.add("-D");
     }

@@ -200,7 +200,6 @@ private class DebugTabs extends JTabbedPane {
     }
    
    @Override public void paint(Graphics g) {
-      BoardLog.logD("BIRD","Paint debug tabs " + active_panels.size());
       if (active_panels.isEmpty()) {
          Graphics2D g2 = (Graphics2D) g;
          Rectangle bnds = getBounds();
