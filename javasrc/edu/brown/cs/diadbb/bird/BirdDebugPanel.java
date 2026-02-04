@@ -42,6 +42,7 @@ import org.w3c.dom.Element;
 
 import edu.brown.cs.bubbles.board.BoardColors;
 import edu.brown.cs.bubbles.board.BoardLog;
+import edu.brown.cs.bubbles.buda.BudaRoot;
 import edu.brown.cs.ivy.mint.MintConstants.CommandArgs;
 import edu.brown.cs.ivy.swing.SwingGridPanel;
 import edu.brown.cs.ivy.swing.SwingWrappingEditorPane;
@@ -166,6 +167,9 @@ void addPopupButtons(JPopupMenu menu)
     }
    menu.add(new ParameterAction());
    menu.add(new StartFrameAction());
+   if (for_instance.shouldRemove() && for_instance.isShouldSave()) {
+      menu.add(new RemoveAction());
+    }
 }
 
 
@@ -356,6 +360,21 @@ private final class SymptomAction extends AbstractAction {
 }       // end of inner class StartFrameAction
 
 
+private final class RemoveAction extends AbstractAction {
+
+   private static final long serialVersionUID = 1;
+   
+   RemoveAction() {
+      super("Remove Panel");
+    }
+   
+   @Override public void actionPerformed(ActionEvent evt) {
+      BirdDebugBubble bbl = (BirdDebugBubble) BudaRoot.findBudaBubble(BirdDebugPanel.this);
+      if (bbl != null) bbl.removeDebugInstance(for_instance);
+    }
+   
+}       // end of inner class RemoveAction
+
 
 private final class ExplainAction extends AbstractAction {
 
@@ -485,10 +504,11 @@ private final class AskLimbaCommand extends Thread {
     
     @Override public void run() {
        CommandArgs args = new CommandArgs("DEBUGID",for_instance.getId(),
-             "TYPE",query_type);
+             "TYPE",query_type); 
        String what = (query_value == null ? null : "QUESTION");
        doing_query = true;
        updateInstance();
+       for_instance.setShouldSave(true);
        BirdFactory.getFactory().issueCommand("ASKLIMBA",args,
              what,query_value,new Responder());
      }

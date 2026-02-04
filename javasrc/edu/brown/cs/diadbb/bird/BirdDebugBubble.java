@@ -122,7 +122,7 @@ void removeDebugInstance(BirdInstance bi)
       pn.dispose(); 
     }
    
-   debug_tabs.repaint();
+   repaint();
 }
 
 

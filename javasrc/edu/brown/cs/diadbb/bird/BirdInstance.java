@@ -39,7 +39,8 @@ class BirdInstance implements BirdConstants
 /*                                                                              */
 /********************************************************************************/
 
-private Element        instance_xml;
+private Element         instance_xml;
+private boolean         should_save;
 
 
 /********************************************************************************/
@@ -51,6 +52,7 @@ private Element        instance_xml;
 BirdInstance(Element xml)
 {
    instance_xml = xml;
+   should_save = false;
 }
 
 
@@ -215,9 +217,14 @@ private String getShortName(String nm)
       nm = nm.substring(idx+1);
     }
    return nm;
-         
-   
 }
+
+
+boolean isShouldSave()                          { return should_save; }
+void setShouldSave(boolean fg)                  { should_save = fg; }
+
+
+
 /********************************************************************************/
 /*                                                                              */
 /*      Update methods                                                          */

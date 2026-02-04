@@ -45,6 +45,7 @@ import java.util.WeakHashMap;
 
 import javax.swing.AbstractAction;
 import javax.swing.JPopupMenu;
+import javax.swing.SwingUtilities;
 
 import org.w3c.dom.Element;
 
@@ -224,9 +225,9 @@ private void handleUpdate(Element xml)
    
    BoardLog.logD("BIRD","Check remove " + binst.getId() + " " + 
          binst.getState() + " " + binst.shouldRemove());
-   if (binst.shouldRemove()) {
+   if (binst.shouldRemove()) {  
       instance_map.remove(id);
-      if (bbl != null) {
+      if (bbl != null && !binst.isShouldSave()) {
          bbl.removeDebugInstance(binst);
        }
     }
@@ -752,7 +753,7 @@ private final class DiadMessageHandler implements MintHandler {
                msg.replyTo("<PONG/>");
                break;    
             case "UPDATE" :
-               handleUpdate(xml);
+               SwingUtilities.invokeLater(new UpdateHandler(xml));
                msg.replyTo();
                break;
             default :
@@ -769,6 +770,20 @@ private final class DiadMessageHandler implements MintHandler {
 
 }	// end of inner class UpdateHandler
 
+
+private class UpdateHandler implements Runnable {
+
+   private Element update_xml;
+   
+   UpdateHandler(Element xml) {
+      update_xml = xml;
+    }
+   
+   @Override public void run() {
+      handleUpdate(update_xml);
+    }
+   
+}       // end of inner class UpdateHanalder
 
 
 /********************************************************************************/
