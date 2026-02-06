@@ -52,7 +52,6 @@ class BirdDebugBubble extends BudaBubble implements BddtConstants.BddtAuxBubble,
 
 private DebugTabs       debug_tabs;
 private Map<String,BirdDebugPanel> active_panels;
-private Object          launch_id;     
 
 private static final long serialVersionUID = 1;
 
@@ -66,7 +65,6 @@ private static final long serialVersionUID = 1;
 
 BirdDebugBubble(BirdFactory fac,Object lid)
 {
-   launch_id = lid;
    debug_tabs = new DebugTabs();
    active_panels = new HashMap<>();
    setContentPane(debug_tabs);
@@ -150,8 +148,6 @@ private int findPanelIndex(BirdDebugPanel pnl)
 /********************************************************************************/
 
 @Override public String getAuxType()            { return "DebuggerAssistant"; }
-
-Object getLaunchId()                            { return launch_id; }
 
 boolean isIdRelevant(String id) 
 {

@@ -245,11 +245,12 @@ private BirdDebugBubble findBubble(Element xml)
    String bid = IvyXml.getAttrString(xml,"ID");
    Element thrd = IvyXml.getChild(xml,"THREAD");
    String tid = IvyXml.getAttrString(thrd,"ID");
+   
    for (BirdDebugBubble bbl : debug_bubbles.keySet()) {
       if (bbl.isIdRelevant(bid)) { 
          return bbl;
        }
-      if (BddtFactory.getFactory().isThreadRelevant(bbl.getLaunchId(),tid)) { 
+      if (BddtFactory.getFactory().isThreadRelevant(bbl,tid)) { 
          return bbl; 
        }
     }

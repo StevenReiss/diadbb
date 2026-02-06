@@ -43,6 +43,7 @@ import org.w3c.dom.Element;
 import edu.brown.cs.bubbles.board.BoardColors;
 import edu.brown.cs.bubbles.board.BoardLog;
 import edu.brown.cs.bubbles.buda.BudaRoot;
+import edu.brown.cs.ivy.file.IvyFormat;
 import edu.brown.cs.ivy.mint.MintConstants.CommandArgs;
 import edu.brown.cs.ivy.swing.SwingGridPanel;
 import edu.brown.cs.ivy.swing.SwingWrappingEditorPane;
@@ -278,39 +279,6 @@ private void appendOutput(String s)
 }
 
 
-private String formatText(String text)
-{
-   String ntext = text;
-   if (ntext == null) ntext = "<No Response>";
-   ntext = ntext.replace("<","&lt;");
-   ntext = ntext.replace(">","&gt;");
-   
-   for ( ; ; ) {
-      int idx0 = ntext.indexOf("```");
-      if (idx0 < 0) break;
-      int idx1 = ntext.indexOf("\n",idx0);
-      int idx2 = ntext.indexOf("```",idx1);
-      int idx3 = ntext.length();
-      if (idx2 < 0) {
-         idx2 = ntext.length();
-       }
-      else {
-         idx3 = ntext.indexOf("\n",idx2);
-         if (idx3 < 0) {
-            ntext += "\n";
-            idx3 = ntext.length();
-          }
-       }
-      
-      String quote = ntext.substring(idx1,idx2);
-      String pre = ntext.substring(0,idx0);
-      String post = ntext.substring(idx3);
-      ntext = pre + "<pre><code>\n" + quote + "\n</code></pre>" + post;
-    }
-   
-   return ntext;
-}
-
 
 /********************************************************************************/
 /*                                                                              */
@@ -444,8 +412,8 @@ private final class SubmitAction implements ActionListener {
       String text = input_area.getText();
       if (text.isBlank()) return;
       AskLimbaCommand cmd = new AskLimbaCommand("USER",text);
-      String disp = "<div align='right'><p style='text-indent: 50px;'><font color='blue'>" + text + 
-                  "</font></p></div>";
+      String disp = "<div align='right'><p style='text-indent: 50px;'><font color='blue'>" + 
+            IvyFormat.formatText(text) + "</font></p></div>";
       appendOutput(disp);
       input_area.setText("");
       
@@ -475,7 +443,7 @@ private final class Responder implements ResponseHandler, Runnable {
          text = "???";
        }
       
-      display_text = formatText(text);
+      display_text = IvyFormat.formatText(text);
       
       SwingUtilities.invokeLater(this);
     }
