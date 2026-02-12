@@ -809,6 +809,7 @@ private final class BirdContexter implements BaleConstants.BaleContextListener {
 /********************************************************************************/
 
 public static class BirdBubbleAction extends AbstractAction implements BddtConstants.BddtAuxBubbleAction {  
+  
    private Object launch_id; 
    
    private static final long serialVersionUID = 1;

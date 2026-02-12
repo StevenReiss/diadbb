@@ -247,12 +247,6 @@ private void setupPanel()
 
 @Override public void paintComponent(Graphics g)
 {
-// Graphics2D g2 = (Graphics2D) g.create();
-// Dimension d = getSize();
-// BoardColors.setColors(this,getBackground());
-// g2.setBackground(getBackground());
-// g2.clearRect(0,0,d.width,d.height);
-   
    super.paintComponent(g);
 }
 

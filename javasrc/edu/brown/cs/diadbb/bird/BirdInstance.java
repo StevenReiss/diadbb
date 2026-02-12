@@ -27,6 +27,7 @@ import java.awt.Color;
 import org.w3c.dom.Element;
 
 import edu.brown.cs.bubbles.board.BoardColors;
+import edu.brown.cs.bubbles.board.BoardLog;
 import edu.brown.cs.ivy.xml.IvyXml;
 
 class BirdInstance implements BirdConstants
@@ -176,6 +177,8 @@ String getSymptomString()
 Color getTabColor()
 {
    Color c = Color.WHITE;
+   String vl = getState().toString().toLowerCase();
+   
    switch (getState()) {
       default :
       case INITIAL :
@@ -188,7 +191,6 @@ Color getTabColor()
       case FINDING_EXECUTED_LOCATIONS :
       case PREPARING_DATA :
       case READY :
-         String vl = getState().toString().toLowerCase();
          c = BoardColors.getColor("Bird.tab." + vl);
          break;
       case NO_USER_STACK :
@@ -202,9 +204,11 @@ Color getTabColor()
          c = Color.RED;
          break;
     }
-   c = BoardColors.getPaleColor(c);
    
-   return c;
+   Color c1 = BoardColors.getPaleColor(c);
+   BoardLog.logD("BIRD","Tab color " + vl + " " + c + " " + c1);
+   
+   return c1;
 }
 
 

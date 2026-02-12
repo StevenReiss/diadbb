@@ -113,7 +113,8 @@ void updateDebugInstance(BirdInstance bi)
 
 void removeDebugInstance(BirdInstance bi)
 { 
-   BirdDebugPanel pn = active_panels.get(bi.getId());
+   BirdDebugPanel pn = active_panels.remove(bi.getId());
+   if (pn == null) return;
    
    int i = findPanelIndex(pn);
    if (i >= 0) {
@@ -170,7 +171,7 @@ boolean isIdRelevant(String id)
    JPopupMenu menu = new JPopupMenu();
    if (!active_panels.isEmpty()) {
       BirdDebugPanel pnl = (BirdDebugPanel) debug_tabs.getSelectedComponent();
-      pnl.addPopupButtons(menu);
+      if (pnl != null) pnl.addPopupButtons(menu);
     }
     
    menu.add(getFloatBubbleAction());
@@ -193,22 +194,13 @@ private class DebugTabs extends JTabbedPane {
       setMinimumSize(new Dimension(400,300));
       setPreferredSize(new Dimension(400,300));
       BoardColors.setColors(this,BoardColors.getColor("Bird.panel.background"));
-      BoardLog.logD("BIRD","Colors " + getBackground() + " " + getForeground());
       setOpaque(true);
     }
    
    @Override public void paint(Graphics g) {
-      BoardLog.logD("BIRD","Paint tabs " + active_panels.size());
-      if (active_panels.isEmpty()) {
+      if (getTabCount() == 0) {
          Graphics2D g2 = (Graphics2D) g;
          Rectangle bnds = getBounds();
-         BoardLog.logD("BIRD","Tab colors " + g.getColor() + " " +
-               g2.getBackground() + " " + g2.getClipBounds() + " " +
-               bnds);
-//       BoardLog.logD("BIRD","Draw empty panel " + bnds + " " + isOpaque() + 
-//             " Colors " + getBackground() + " " + getForeground());
-//       g2.setColor(Color.LIGHT_GRAY);
-//       g2.setBackground(Color.LIGHT_GRAY);
          g2.fillRect(0,0,bnds.width,bnds.height);
          g2.clearRect(0,0,bnds.width,bnds.height);
          SwingText.drawText("Smart Debugger Assistant",g2,bnds);
@@ -216,12 +208,6 @@ private class DebugTabs extends JTabbedPane {
       else {
          super.paint(g);
        }
-    }
-   
-   @Override public void paintComponent(Graphics g) {
-      
-   // BoardLog.logD("BIRD","Paint debugtab component " + active_panels.size());    
-      super.paintComponent(g);
     }
    
 }       // end of inner class DebugTabs
