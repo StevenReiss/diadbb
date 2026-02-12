@@ -89,6 +89,8 @@ void addDebugInstance(BirdInstance bi)
    debug_tabs.addTab(bi.getTitle(),pnl);
    
    updateDebugInstance(bi);
+   
+   repaint();
 }
 
 
@@ -196,9 +198,13 @@ private class DebugTabs extends JTabbedPane {
     }
    
    @Override public void paint(Graphics g) {
+      BoardLog.logD("BIRD","Paint tabs " + active_panels.size());
       if (active_panels.isEmpty()) {
          Graphics2D g2 = (Graphics2D) g;
          Rectangle bnds = getBounds();
+         BoardLog.logD("BIRD","Tab colors " + g.getColor() + " " +
+               g2.getBackground() + " " + g2.getClipBounds() + " " +
+               bnds);
 //       BoardLog.logD("BIRD","Draw empty panel " + bnds + " " + isOpaque() + 
 //             " Colors " + getBackground() + " " + getForeground());
 //       g2.setColor(Color.LIGHT_GRAY);
@@ -213,6 +219,7 @@ private class DebugTabs extends JTabbedPane {
     }
    
    @Override public void paintComponent(Graphics g) {
+      
    // BoardLog.logD("BIRD","Paint debugtab component " + active_panels.size());    
       super.paintComponent(g);
     }
