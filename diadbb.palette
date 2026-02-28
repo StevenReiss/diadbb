@@ -8,7 +8,7 @@ Bird.tab.doing_base_execution : yellow2
 Bird.tab.finding_executed_locations : yellow1
 Bird.tab.preparing_data :  yellowgreen
 Bird.tab.ready		:	green
-Bird.panel.background	:	#404db7e5
+Bird.panel.background	:	#a5dd86
 
 
 
