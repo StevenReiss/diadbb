@@ -71,6 +71,8 @@ private JButton         repairs_btn;
 private JButton         explain_btn;
 private JButton         submit_btn;
 private boolean         doing_query;
+private Boolean         initial_response;
+private boolean         have_explanation;
 
 private static final long serialVersionUID = 1;
 
@@ -86,6 +88,8 @@ BirdDebugPanel(BirdInstance bi)
    for_instance = bi;
    BoardColors.setColors(this,BoardColors.getColor("Bird.panel.background"));
    doing_query = false;
+   initial_response = null;
+   have_explanation = false;
    setupPanel();
 }
 
@@ -116,12 +120,25 @@ void updateInstance()
    symptom_text.setText(for_instance.getSymptomString());
    state_text.setText(for_instance.getState().toString());
    state_text.setBackground(for_instance.getTabColor());
+   if (initial_response == Boolean.FALSE) {
+      String resp = for_instance.getResponse();
+      if (resp != null && !resp.isEmpty()) {
+         String query = "Explain the the problem";
+         DisplayResponse dr = new DisplayResponse(query,resp);
+         SwingUtilities.invokeLater(dr);
+         initial_response = true;
+         doing_query = false;
+         have_explanation = true;
+       }
+    }
    
    if (submit_btn == null) return;
    
    locations_btn.setEnabled(false);
    repairs_btn.setEnabled(false);
-   explain_btn.setEnabled(false);
+   if (explain_btn != null) {
+      explain_btn.setEnabled(false);
+    }
    submit_btn.setEnabled(false);
    if (symptom_btn != null) symptom_btn.setEnabled(false);
    
@@ -136,12 +153,25 @@ void updateInstance()
       case DOING_ANALYSIS :
          if (symptom_btn != null) symptom_btn.setEnabled(true);
          break;
+         
+      case DOING_QUERY :
+         initial_response = false;
+         doing_query = true;
+         break;
 
       case READY :
+         if (initial_response == Boolean.FALSE) {
+            doing_query = false;
+            initial_response = null;
+          }
          if (symptom_btn != null) symptom_btn.setEnabled(true);
-         locations_btn.setEnabled(true);
-         repairs_btn.setEnabled(true);
-         explain_btn.setEnabled(true);
+         if (have_explanation) {
+            locations_btn.setEnabled(true);
+            repairs_btn.setEnabled(true);
+          }
+         if (explain_btn != null) {
+            explain_btn.setEnabled(true);
+          }
          submit_btn.setEnabled(true);
          break;
     }
@@ -151,6 +181,28 @@ void updateInstance()
 
 void dispose()
 { }
+
+
+private class DisplayResponse implements Runnable {
+
+   private String query_string;
+   private String result_string;
+   
+   DisplayResponse(String q,String r) {
+      query_string = q;
+      result_string = r;
+    } 
+   
+   @Override public void run() {
+      String disp = "<div align='right'><p style='text-indent: 50px;'><font color='blue'>" +
+         query_string + "</font></p></div>";
+      appendOutput(disp);
+      disp = "<div align='left'><p><font color='black'>" + result_string +
+            "</font></p></div>";
+      appendOutput(disp);    
+    }
+   
+}       // end of inner class DisplayResponse
 
 
 
@@ -166,7 +218,6 @@ void addPopupButtons(JPopupMenu menu)
    if (state != DiadCandidateState.INITIAL) {
       menu.add(new SymptomAction());
     }
-   menu.add(new ParameterAction());
    menu.add(new StartFrameAction());
    if (for_instance.shouldRemove() && for_instance.isShouldSave()) {
       menu.add(new RemoveAction());
@@ -226,8 +277,13 @@ private void setupPanel()
    
    addSeparator();
    
-   explain_btn = addBottomButton("Explain","EXPLAIN",true,
-         new ExplainAction());
+   if (!for_instance.getAutoQuery()) {
+      explain_btn = addBottomButton("Explain","EXPLAIN",true,
+            new ExplainAction());
+    }
+   else {
+      explain_btn = null;
+    }
    locations_btn = addBottomButton("Locations","LOCS",true,
          new LocationsAction());
    repairs_btn = addBottomButton("Repairs","FIX",true,
@@ -280,20 +336,6 @@ private void appendOutput(String s)
 /*                                                                              */
 /********************************************************************************/
 
-private final class ParameterAction extends AbstractAction {
-   
-   private static final long serialVersionUID = 1;
-   
-   ParameterAction() {
-      super("Set Diad Parameters");
-    }
-   
-   @Override public void actionPerformed(ActionEvent evt) {
-    }
-   
-}       // end of inner class ParameterAction
-
-
 private final class StartFrameAction extends AbstractAction {
    
    private static final long serialVersionUID = 1;
@@ -338,7 +380,7 @@ private final class RemoveAction extends AbstractAction {
 }       // end of inner class RemoveAction
 
 
-private final class ExplainAction extends AbstractAction {
+private final class ExplainAction extends AbstractAction implements ResponseHandler {
 
    private static final long serialVersionUID = 1;
    
@@ -354,12 +396,18 @@ private final class ExplainAction extends AbstractAction {
             "</font></p></div>";
       appendOutput(disp);
     }
+   
+   @Override public void handleResponse(Element xml) {
+      have_explanation = true;
+      Responder resp = new Responder();
+      resp.handleResponse(xml);
+    }
+   
+}       // end of inner class ExplainAction
 
-}       // end of inner class RepairsAction
 
 
-
-private final class LocationsAction extends AbstractAction {
+private final class LocationsAction extends AbstractAction implements ResponseHandler {
 
    private static final long serialVersionUID = 1;
    
@@ -369,17 +417,24 @@ private final class LocationsAction extends AbstractAction {
    
    @Override public void actionPerformed(ActionEvent evt) {
       String query = "Find potential fault locations for this symptom";
-      AskLimbaCommand cmd = new AskLimbaCommand("LOCATIONS",null);
+      AskLimbaCommand cmd = new AskLimbaCommand("LOCATIONS",null,this);
       cmd.start();
       String disp = "<div align='right'><p style='text-indent: 50px;'><font color='blue'>" + query + 
             "</font></p></div>";
       appendOutput(disp);
     }
    
+   @Override public void handleResponse(Element xml) {
+      // should go through response and extract location information
+      // then we should create a bubble stack of the result.
+      Responder resp = new Responder();
+      resp.handleResponse(xml);
+    }
+   
 }       // end of inner class LocationsAction
 
 
-private final class RepairsAction extends AbstractAction {
+private final class RepairsAction extends AbstractAction implements ResponseHandler {
 
    private static final long serialVersionUID = 1;
    
@@ -395,7 +450,16 @@ private final class RepairsAction extends AbstractAction {
             "</font></p></div>";
       appendOutput(disp);
     }
-
+   
+   @Override public void handleResponse(Element xml) {
+      // should go through response and find patches for each repair
+      // then should use SEEDE to validate the repair and then make the patch
+      // Actually, the validation should be done inside DIAD
+      Responder resp = new Responder();
+      resp.handleResponse(xml);
+    }
+   
+   
 }       // end of inner class RepairsAction
 
 
@@ -442,6 +506,7 @@ private final class Responder implements ResponseHandler, Runnable {
       SwingUtilities.invokeLater(this);
     }
    
+   
    @Override public void run() {
       doing_query = false;
       updateInstance();
@@ -457,11 +522,20 @@ private final class AskLimbaCommand extends Thread {
    
     private String query_type;
     private String query_value;
+    private ResponseHandler response_handler;
    
     AskLimbaCommand(String typ,String value) {
+       this(typ,value,null);
+     }
+    
+    AskLimbaCommand(String typ,String value,ResponseHandler resp) {
        super("AskLimba_" + typ + "_Thread");
        query_type = typ;
        query_value = value;
+       if (resp == null) {
+          resp = new Responder();
+        }
+       response_handler = resp;
      }
     
     @Override public void run() {
@@ -472,7 +546,7 @@ private final class AskLimbaCommand extends Thread {
        updateInstance();
        for_instance.setShouldSave(true);
        BirdFactory.getFactory().issueCommand("ASKLIMBA",args,
-             what,query_value,new Responder());
+             what,query_value,response_handler);
      }
     
 }       // end of inner class AskLimbaCommand

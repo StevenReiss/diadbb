@@ -36,6 +36,7 @@ enum DiadCandidateState {
    DOING_BASE_EXECUTION,
    FINDING_EXECUTED_LOCATIONS,
    PREPARING_DATA,
+   DOING_QUERY,
    READY,
    NO_USER_STACK,
    NO_ANALYSIS,
@@ -64,6 +65,14 @@ enum DiadValueOperator {
    EQL, NEQ, GTR, GEQ, LSS, LEQ,
 }
 
+
+enum DiadFileMode {
+   ALL_FILES,
+   COMPUTED_FILES,
+   STACK_FILES,
+   FAIT_FILES,
+   USER_FILES,
+}
 
 interface ResponseHandler {
    void handleResponse(Element xml);

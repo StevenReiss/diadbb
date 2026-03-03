@@ -83,6 +83,18 @@ String getTitle()
 }
 
 
+String getResponse()
+{
+   return IvyXml.getTextElement(instance_xml,"RESPONSE");
+}
+
+
+boolean getAutoQuery()
+{
+   return IvyXml.getAttrBool(instance_xml,"AUTO_QUERY");
+}
+
+
 String getLocationString()
 {
    Element frm = IvyXml.getChild(instance_xml,"FRAME");

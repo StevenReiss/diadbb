@@ -27,18 +27,27 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
+import java.awt.event.ActionEvent;
 import java.awt.event.MouseEvent;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 
+import javax.swing.AbstractAction;
+import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
 import javax.swing.JTabbedPane;
+
+import org.w3c.dom.Element;
 
 import edu.brown.cs.bubbles.bddt.BddtConstants;
 import edu.brown.cs.bubbles.board.BoardColors;
 import edu.brown.cs.bubbles.board.BoardLog;
 import edu.brown.cs.bubbles.buda.BudaBubble;
+import edu.brown.cs.ivy.swing.SwingGridPanel;
 import edu.brown.cs.ivy.swing.SwingText;
+import edu.brown.cs.ivy.xml.IvyXml;
 
 class BirdDebugBubble extends BudaBubble implements BddtConstants.BddtAuxBubble, BirdConstants
 {
@@ -90,7 +99,7 @@ void addDebugInstance(BirdInstance bi)
    
    updateDebugInstance(bi);
    
-   repaint();
+   debug_tabs.repaint();
 }
 
 
@@ -107,7 +116,6 @@ void updateDebugInstance(BirdInstance bi)
          debug_tabs.setBackgroundAt(idx,c);
        }
     }
-   
 }
 
 
@@ -123,7 +131,7 @@ void removeDebugInstance(BirdInstance bi)
       pn.dispose(); 
     }
    
-   repaint();
+   debug_tabs.repaint();
 }
 
 
@@ -173,6 +181,8 @@ boolean isIdRelevant(String id)
       BirdDebugPanel pnl = (BirdDebugPanel) debug_tabs.getSelectedComponent();
       if (pnl != null) pnl.addPopupButtons(menu);
     }
+   
+   menu.add(new ParameterAction());
     
    menu.add(getFloatBubbleAction());
    menu.show(this,e.getX(),e.getY());
@@ -212,6 +222,69 @@ private class DebugTabs extends JTabbedPane {
    
 }       // end of inner class DebugTabs
 
+
+
+/********************************************************************************/
+/*                                                                              */
+/*      Setting parameters                                                      */
+/*                                                                              */
+/********************************************************************************/
+
+private final class ParameterAction extends AbstractAction {
+
+   private static final long serialVersionUID = 1;
+   
+   ParameterAction() {
+      super("Set Diad Parameters");
+    }
+   
+   @Override public void actionPerformed(ActionEvent evt) {
+      ParameterDialog pd = new ParameterDialog();
+      pd.process();
+    }
+
+}       // end of inner class ParameterAction
+
+
+private class ParameterDialog extends SwingGridPanel {
+   
+   private static final long serialVersionUID = 1;
+   
+   ParameterDialog() {
+      Element parms = BirdFactory.getFactory().sendDiadMessage("PARAMETER",null,null);
+      DiadFileMode mode = IvyXml.getAttrEnum(parms,"FILEMODE",DiadFileMode.FAIT_FILES);
+      int maxstep = IvyXml.getAttrInt(parms,"SEEDE_STEPS",1000000);
+      int maxdepth = IvyXml.getAttrInt(parms,"SEEDE_DEPTH",100);
+      boolean autoquery = IvyXml.getAttrBool(parms,"AUTO_QUERY");
+      Element msxml= BirdFactory.getFactory().sendDiadMessage("SETMODEL",null,null);
+      Set<String> mdls = new TreeSet<>();
+      String curmdl = IvyXml.getAttrString(parms,"MODEL");
+      for (Element mxml : IvyXml.children(msxml,"MODEL")) {
+         String txt = IvyXml.getAttrString(mxml,"NAME");
+         mdls.add(txt);
+         if (IvyXml.getAttrBool(mxml,"ACTIVE")) {
+            curmdl = txt;
+          }
+       }
+      
+      beginLayout();
+      addBannerLabel("Parameters for Smart Debugger Assistant");
+      addChoice("File Mode",mode,null);
+      addNumericField("Max Steps",100000,100000000,maxstep,null);
+      addNumericField("Max Depth",10,1000,maxdepth,null);
+      addChoice("LLM Model",mdls,curmdl,null);
+      addBoolean("Auto Query",autoquery,null);
+    }
+   
+   void process() {
+      int sts = JOptionPane.showOptionDialog(BirdDebugBubble.this,this,
+            "Set Assistant Options",JOptionPane.OK_CANCEL_OPTION,
+            JOptionPane.PLAIN_MESSAGE,null,null,null);
+      if (sts == JOptionPane.OK_OPTION) {
+         // set parameters here
+       }
+    }
+}
 
 }       // end of class BirdDebugBubble
 
