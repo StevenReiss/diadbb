@@ -2,13 +2,19 @@ Bird.tab.initial	:	white
 Bird.tab.finding_symptom :	 blue
 Bird.tab.no_symptom_found :	blue
 Bird.tab.doing_analysis :	cyan
-Bird.tab.finding_all_locations : yellow4
-Bird.tab.finding_starting_frame : yellow3
+Bird.tab.finding_all_locations : violet
+Bird.tab.finding_starting_frame : magenta
 Bird.tab.doing_base_execution : yellow2
 Bird.tab.finding_executed_locations : yellow1
-Bird.tab.preparing_data :  yellowgreen
+Bird.tab.preparing_data :  yellow
+Bird.tab.doing_query : yellowgreen
 Bird.tab.ready		:	green
 Bird.panel.background	:	#a5dd86
+
+
+
+
+
 
 
 

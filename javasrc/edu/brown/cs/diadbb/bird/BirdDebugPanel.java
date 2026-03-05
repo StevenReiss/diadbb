@@ -31,6 +31,7 @@ import javax.swing.AbstractAction;
 import javax.swing.JButton;
 import javax.swing.JEditorPane;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
@@ -123,7 +124,7 @@ void updateInstance()
    if (initial_response == Boolean.FALSE) {
       String resp = for_instance.getResponse();
       if (resp != null && !resp.isEmpty()) {
-         String query = "Explain the the problem";
+         String query = "Explain the problem";
          DisplayResponse dr = new DisplayResponse(query,resp);
          SwingUtilities.invokeLater(dr);
          initial_response = true;
@@ -359,6 +360,13 @@ private final class SymptomAction extends AbstractAction {
     }
    
    @Override public void actionPerformed(ActionEvent evt) {
+      BirdSymptomPanel pnl = new BirdSymptomPanel(for_instance);
+      int sts = JOptionPane.showOptionDialog(BirdDebugPanel.this,pnl,
+            "Specify Problem Symptom",
+            JOptionPane.OK_CANCEL_OPTION,
+            JOptionPane.PLAIN_MESSAGE,null,null,null);
+      if (sts != JOptionPane.OK_OPTION) return;
+      // define new symptom and pass to diad
     }
    
 }       // end of inner class StartFrameAction

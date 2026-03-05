@@ -44,6 +44,7 @@ import org.w3c.dom.Element;
 import edu.brown.cs.bubbles.bddt.BddtConstants;
 import edu.brown.cs.bubbles.board.BoardColors;
 import edu.brown.cs.bubbles.board.BoardLog;
+import edu.brown.cs.bubbles.board.BoardProperties;
 import edu.brown.cs.bubbles.buda.BudaBubble;
 import edu.brown.cs.ivy.swing.SwingGridPanel;
 import edu.brown.cs.ivy.swing.SwingText;
@@ -61,6 +62,8 @@ class BirdDebugBubble extends BudaBubble implements BddtConstants.BddtAuxBubble,
 
 private DebugTabs       debug_tabs;
 private Map<String,BirdDebugPanel> active_panels;
+private Dimension       preferred_size;
+
 
 private static final long serialVersionUID = 1;
 
@@ -74,6 +77,10 @@ private static final long serialVersionUID = 1;
 
 BirdDebugBubble(BirdFactory fac,Object lid)
 {
+   BoardProperties birdprops = BoardProperties.getProperties("Bird");
+   int w = birdprops.getInt("Bird.panel.width",400);
+   int h = birdprops.getInt("Bird.panel.height",300);
+   preferred_size = new Dimension(w,h);
    debug_tabs = new DebugTabs();
    active_panels = new HashMap<>();
    setContentPane(debug_tabs);
@@ -202,7 +209,7 @@ private class DebugTabs extends JTabbedPane {
    DebugTabs() {
       super(JTabbedPane.TOP,JTabbedPane.SCROLL_TAB_LAYOUT);
       setMinimumSize(new Dimension(400,300));
-      setPreferredSize(new Dimension(400,300));
+      setPreferredSize(preferred_size);
       BoardColors.setColors(this,BoardColors.getColor("Bird.panel.background"));
       setOpaque(true);
     }
@@ -259,7 +266,9 @@ private class ParameterDialog extends SwingGridPanel {
       Element msxml= BirdFactory.getFactory().sendDiadMessage("SETMODEL",null,null);
       Set<String> mdls = new TreeSet<>();
       String curmdl = IvyXml.getAttrString(parms,"MODEL");
-      for (Element mxml : IvyXml.children(msxml,"MODEL")) {
+      Element top = msxml;
+      if (!IvyXml.isElement(top,"MODELS")) top = IvyXml.getChild(msxml,"MODELS");
+      for (Element mxml : IvyXml.children(top,"MODEL")) {
          String txt = IvyXml.getAttrString(mxml,"NAME");
          mdls.add(txt);
          if (IvyXml.getAttrBool(mxml,"ACTIVE")) {
@@ -277,6 +286,7 @@ private class ParameterDialog extends SwingGridPanel {
     }
    
    void process() {
+      BoardLog.logD("BIRD","Show parameter dialog");
       int sts = JOptionPane.showOptionDialog(BirdDebugBubble.this,this,
             "Set Assistant Options",JOptionPane.OK_CANCEL_OPTION,
             JOptionPane.PLAIN_MESSAGE,null,null,null);
