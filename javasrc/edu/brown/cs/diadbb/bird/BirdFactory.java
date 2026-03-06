@@ -1,21 +1,21 @@
 /********************************************************************************/
-/*										*/
-/*		BirdFactory.java						*/
-/*										*/
-/*	Factory for setting up and interfacing with DIAD for debugging		*/
-/*										*/
+/*                                                                              */
+/*              BirdFactory.java                                                */
+/*                                                                              */
+/*      Factory for setting up and interfacing with DIAD for debugging          */
+/*                                                                              */
 /********************************************************************************/
-/*	Copyright 2025 Brown University -- Steven P. Reiss		      */
+/*      Copyright 2025 Brown University -- Steven P. Reiss                    */
 /*********************************************************************************
- *  Copyright 2015, Brown University, Providence, RI.				 *
- *										 *
- *			  All Rights Reserved					 *
- *										 *
- * This program and the accompanying materials are made available under the	 *
+ *  Copyright 2015, Brown University, Providence, RI.                            *
+ *                                                                               *
+ *                        All Rights Reserved                                    *
+ *                                                                               *
+ * This program and the accompanying materials are made available under the      *
  * terms of the Eclipse Public License v1.0 which accompanies this distribution, *
- * and is available at								 *
- *	http://www.eclipse.org/legal/epl-v10.html				 *
- *										 *
+ * and is available at                                                           *
+ *      http://www.eclipse.org/legal/epl-v10.html                                *
+ *                                                                               *
  ********************************************************************************/
 
 
@@ -71,9 +71,9 @@ public final class BirdFactory implements BirdConstants, MintConstants
 
 
 /********************************************************************************/
-/*										*/
-/*	Private Storage 							*/
-/*										*/
+/*                                                                              */
+/*      Private Storage                                                         */
+/*                                                                              */
 /********************************************************************************/
 
 private boolean diad_running;
@@ -89,9 +89,9 @@ private static BirdFactory the_factory = new BirdFactory();
 
 
 /********************************************************************************/
-/*										*/
-/*	Setup methods								*/
-/*										*/
+/*                                                                              */
+/*      Setup methods                                                           */
+/*                                                                              */
 /********************************************************************************/
 
 public static void setup()
@@ -107,7 +107,7 @@ private static final class ResourceFilter implements BoardPluginFilter {
       return false;
     }
 
-}	// end of inner class ResSurceFilter
+}       // end of inner class ResSurceFilter
 
 
 
@@ -121,10 +121,10 @@ public static void initialize(BudaRoot br)
    switch (BoardSetup.getSetup().getRunMode()) {
       case NORMAL :
       case CLIENT :
-	 the_factory.setupCallbacks();
-	 break;
+         the_factory.setupCallbacks();
+         break;
       case SERVER :
-	 break;
+         break;
     }
 
    BirdStarter bs = new BirdStarter(br);
@@ -152,9 +152,9 @@ public static BirdFactory getFactory()
 
 
 /********************************************************************************/
-/*										*/
-/*	Constructors								*/
-/*										*/
+/*                                                                              */
+/*      Constructors                                                            */
+/*                                                                              */
 /********************************************************************************/
 
 private BirdFactory()
@@ -175,10 +175,10 @@ private BirdFactory()
    switch (BoardSetup.getSetup().getRunMode()) {
       case NORMAL :
       case CLIENT :
-	 break;
+         break;
       case SERVER :
-	 mc.register("<BIRD TYPE='START' />",new StartHandler());
-	 break;
+         mc.register("<BIRD TYPE='START' />",new StartHandler());
+         break;
     }
 }
 
@@ -259,9 +259,9 @@ private BirdDebugBubble findBubble(Element xml)
 
 
 /********************************************************************************/
-/*										*/
-/*	Starting methods							*/
-/*										*/
+/*                                                                              */
+/*      Starting methods                                                        */
+/*                                                                              */
 /********************************************************************************/
 
 private void start()
@@ -287,9 +287,9 @@ private boolean startDiad()
       mc.send("<LIMBA DO='PING' />");
       String rslt = rply.waitForString();
       if (rslt != null) {
-	 diad_running = true;
-	 diad_started = true;
-	 return true;
+         diad_running = true;
+         diad_started = true;
+         return true;
        }
     }
 
@@ -317,27 +317,27 @@ private boolean startDiad()
       StringBuffer buf = new StringBuffer();
       StringTokenizer tok = new StringTokenizer(xcp,":;");
       while (tok.hasMoreTokens()) {
-	 String elt = tok.nextToken();
-	 if (!elt.startsWith("/") &&  !elt.startsWith("\\")) {
-	    if (elt.equals("eclipsejar")) {
-	       elt = setup.getEclipsePath();
-	     }
-	    else if (elt.equals("diad.jar") && jarfile != null) {
-	       elt = jarfile.getPath();
-	     }
-	    else {
-	       String oelt = elt;
-	       elt = setup.getLibraryPath(elt);
-	       File f1 = new File(elt);
-	       if (!f1.exists()) {
-		  File f0 = setup.getLibraryDirectory().getParentFile();
-		  File f2 = new File(f0,"dropins");
-		  File f3 = new File(f2,oelt);
+         String elt = tok.nextToken();
+         if (!elt.startsWith("/") &&  !elt.startsWith("\\")) {
+            if (elt.equals("eclipsejar")) {
+               elt = setup.getEclipsePath();
+             }
+            else if (elt.equals("diad.jar") && jarfile != null) {
+               elt = jarfile.getPath();
+             }
+            else {
+               String oelt = elt;
+               elt = setup.getLibraryPath(elt);
+               File f1 = new File(elt);
+               if (!f1.exists()) {
+                  File f0 = setup.getLibraryDirectory().getParentFile();
+                  File f2 = new File(f0,"dropins");
+                  File f3 = new File(f2,oelt);
                   if (f3.exists()) {
                      f1 = f3;
                      elt = f3.getPath();
                    }
-		}
+                }
                if (!f1.exists()) {
                   File f4 = new File("/pro/diad/diad.jar");
                   if (f4.exists()) {
@@ -345,11 +345,11 @@ private boolean startDiad()
                      elt = f4.getPath();
                    }
                 }
-	       BoardLog.logD("BIRD","Use class path diad element " + elt);
-	     }
-	  }
-	 if (buf.length() > 0) buf.append(File.pathSeparator);
-	 buf.append(elt);
+               BoardLog.logD("BIRD","Use class path diad element " + elt);
+             }
+          }
+         if (buf.length() > 0) buf.append(File.pathSeparator);
+         buf.append(elt);
        }
       xcp = buf.toString();
     }
@@ -376,32 +376,32 @@ private boolean startDiad()
       String rslt = rply.waitForString(1000);
       BoardLog.logD("BIRD","Diad ping response " + rslt);
       if (rslt != null) {
-	 diad_running = true;
-	 break;
+         diad_running = true;
+         break;
        }
       if (i == 0) {
-	 try {
-	    // make IGNORE_OUTPUT to clean up otutput
-	    exec = new IvyExec(args,null,IvyExec.ERROR_OUTPUT);
-	    BoardLog.logD("BIRD","Run " + exec.getCommand());
-	  }
-	 catch (IOException e) {
-	    break;
-	  }
+         try {
+            // make IGNORE_OUTPUT to clean up otutput
+            exec = new IvyExec(args,null,IvyExec.ERROR_OUTPUT);
+            BoardLog.logD("BIRD","Run " + exec.getCommand());
+          }
+         catch (IOException e) {
+            break;
+          }
        }
       else {
-	 try {
-	    if (exec != null) {
-	       int sts = exec.exitValue();
-	       BoardLog.logD("BIRD","Diad server disappeared with status " + sts);
-	       break;
-	     }
-	  }
-	 catch (IllegalThreadStateException e) { }
+         try {
+            if (exec != null) {
+               int sts = exec.exitValue();
+               BoardLog.logD("BIRD","Diad server disappeared with status " + sts);
+               break;
+             }
+          }
+         catch (IllegalThreadStateException e) { }
        }
 
       try {
-	 Thread.sleep(2000);
+         Thread.sleep(2000);
        }
       catch (InterruptedException e) { }
     }
@@ -467,29 +467,29 @@ private boolean startLimba()
       StringBuffer buf = new StringBuffer();
       StringTokenizer tok = new StringTokenizer(xcp,":;");
       while (tok.hasMoreTokens()) {
-	 String elt = tok.nextToken();
-	 if (!elt.startsWith("/") &&  !elt.startsWith("\\")) {
-	    if (elt.equals("eclipsejar")) {
-	       elt = setup.getEclipsePath();
-	     }
-	    else if (elt.equals("limba.jar") && jarfile != null) {
-	       elt = jarfile.getPath();
-	     }
-	    else {
-	       String oelt = elt;
-	       elt = setup.getLibraryPath(elt);
-	       File f1 = new File(elt);
-	       if (!f1.exists()) {
-		  f1 = setup.getLibraryDirectory().getParentFile();
-		  File f2 = new File(f1,"dropins");
-		  File f3 = new File(f2,oelt);
-		  if (f3.exists()) elt = f3.getPath();
-		}
-	       BoardLog.logD("BAIT","Use class path limba element " + elt);
-	     }
-	  }
-	 if (buf.length() > 0) buf.append(File.pathSeparator);
-	 buf.append(elt);
+         String elt = tok.nextToken();
+         if (!elt.startsWith("/") &&  !elt.startsWith("\\")) {
+            if (elt.equals("eclipsejar")) {
+               elt = setup.getEclipsePath();
+             }
+            else if (elt.equals("limba.jar") && jarfile != null) {
+               elt = jarfile.getPath();
+             }
+            else {
+               String oelt = elt;
+               elt = setup.getLibraryPath(elt);
+               File f1 = new File(elt);
+               if (!f1.exists()) {
+                  f1 = setup.getLibraryDirectory().getParentFile();
+                  File f2 = new File(f1,"dropins");
+                  File f3 = new File(f2,oelt);
+                  if (f3.exists()) elt = f3.getPath();
+                }
+               BoardLog.logD("BAIT","Use class path limba element " + elt);
+             }
+          }
+         if (buf.length() > 0) buf.append(File.pathSeparator);
+         buf.append(elt);
        }
       xcp = buf.toString();
     }
@@ -553,32 +553,32 @@ private boolean startLimba()
       String rslt = rply.waitForString(1000);
       BoardLog.logD("BAIT","Limba ping response " + rslt);
       if (rslt != null) {
-	 limba_running = true;
-	 break;
+         limba_running = true;
+         break;
        }
       if (i == 0) {
-	 try {
+         try {
             // make IGNORE_OUTPUT to clean up otutput
             exec = new IvyExec(args,null,IvyExec.ERROR_OUTPUT);    
-	    BoardLog.logD("BAIT","Run " + exec.getCommand());
-	  }
-	 catch (IOException e) {
-	    break;
-	  }
+            BoardLog.logD("BAIT","Run " + exec.getCommand());
+          }
+         catch (IOException e) {
+            break;
+          }
        }
       else {
-	 try {
-	    if (exec != null) {
-	       int sts = exec.exitValue();
-	       BoardLog.logD("BAIT","Limba server disappeared with status " + sts);
-	       break;
-	     }
-	  }
-	 catch (IllegalThreadStateException e) { }
+         try {
+            if (exec != null) {
+               int sts = exec.exitValue();
+               BoardLog.logD("BAIT","Limba server disappeared with status " + sts);
+               break;
+             }
+          }
+         catch (IllegalThreadStateException e) { }
        }
       
       try {
-	 Thread.sleep(2000);
+         Thread.sleep(2000);
        }
       catch (InterruptedException e) { }
     }
@@ -607,7 +607,7 @@ private static class BirdStarter extends Thread {
       the_factory.start();
     }
 
-}	// end of inner class BirdStarter
+}       // end of inner class BirdStarter
 
 
 private final class StartHandler implements MintHandler {
@@ -618,15 +618,15 @@ private final class StartHandler implements MintHandler {
       else msg.replyTo("<RESULT VALUE='false' />");
     }
 
-}	 // end of inner class StartHandler
+}        // end of inner class StartHandler
 
 
 
 
 /********************************************************************************/
-/*										*/
-/*	Command methods 							*/
-/*										*/
+/*                                                                              */
+/*      Command methods                                                         */
+/*                                                                              */
 /********************************************************************************/
 
 void issueCommand(String cmd,CommandArgs args,String elt,String body,ResponseHandler hdlr)
@@ -665,14 +665,14 @@ void issueXmlCommand(String cmd,CommandArgs args,String body,ResponseHandler hdl
 
 private static final class DummyResponder implements ResponseHandler {
    @Override public void handleResponse(Element xml) { }
-}	// end of inner class DummyResponder
+}       // end of inner class DummyResponder
 
 
 
 /********************************************************************************/
-/*										*/
-/*	Diad Server communication						*/
-/*										*/
+/*                                                                              */
+/*      Diad Server communication                                               */
+/*                                                                              */
 /********************************************************************************/
 
 Element sendDiadMessage(String cmd,CommandArgs args,String cnts)
@@ -688,7 +688,7 @@ Element sendDiadMessage(String cmd,CommandArgs args,String cnts)
    xw.field("DO",cmd);
    if (args != null) {
       for (Map.Entry<String,Object> ent : args.entrySet()) {
-	 xw.field(ent.getKey(),ent.getValue());
+         xw.field(ent.getKey(),ent.getValue());
        }
     }
    if (cnts != null) {
@@ -711,9 +711,9 @@ Element sendDiadMessage(String cmd,CommandArgs args,String cnts)
 
 
 /********************************************************************************/
-/*										*/
-/*	Message handling							*/
-/*										*/
+/*                                                                              */
+/*      Message handling                                                        */
+/*                                                                              */
 /********************************************************************************/
 
 private final class DiadReplyHandler implements MintHandler {
@@ -737,7 +737,7 @@ private final class DiadReplyHandler implements MintHandler {
       msg.replyTo(rslt);
    }
 
-}	// end of inner class UpdateHandler
+}       // end of inner class UpdateHandler
 
 
 
@@ -769,7 +769,7 @@ private final class DiadMessageHandler implements MintHandler {
        }
     }
 
-}	// end of inner class UpdateHandler
+}       // end of inner class UpdateHandler
 
 
 private class UpdateHandler implements Runnable {
@@ -788,9 +788,9 @@ private class UpdateHandler implements Runnable {
 
 
 /********************************************************************************/
-/*										*/
-/*	Editor context actions							*/
-/*										*/
+/*                                                                              */
+/*      Editor context actions                                                  */
+/*                                                                              */
 /********************************************************************************/
 
 private final class BirdContexter implements BaleConstants.BaleContextListener {
@@ -798,7 +798,7 @@ private final class BirdContexter implements BaleConstants.BaleContextListener {
    @Override public void addPopupMenuItems(BaleContextConfig cfg,JPopupMenu menu) {
     }
 
-}	// end of inner class BucsContexter
+}       // end of inner class BucsContexter
 
 
 

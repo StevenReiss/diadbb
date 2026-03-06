@@ -45,6 +45,7 @@ import edu.brown.cs.bubbles.board.BoardColors;
 import edu.brown.cs.bubbles.board.BoardLog;
 import edu.brown.cs.bubbles.buda.BudaRoot;
 import edu.brown.cs.ivy.file.IvyFormat;
+import edu.brown.cs.ivy.file.IvyLog;
 import edu.brown.cs.ivy.mint.MintConstants.CommandArgs;
 import edu.brown.cs.ivy.swing.SwingGridPanel;
 import edu.brown.cs.ivy.swing.SwingWrappingEditorPane;
@@ -71,6 +72,7 @@ private JButton         locations_btn;
 private JButton         repairs_btn;
 private JButton         explain_btn;
 private JButton         submit_btn;
+private JButton         retry_btn;
 private boolean         doing_query;
 private Boolean         initial_response;
 private boolean         have_explanation;
@@ -140,6 +142,9 @@ void updateInstance()
    if (explain_btn != null) {
       explain_btn.setEnabled(false);
     }
+   if (retry_btn != null) {
+      retry_btn.setEnabled(false);
+    }
    submit_btn.setEnabled(false);
    if (symptom_btn != null) symptom_btn.setEnabled(false);
    
@@ -172,6 +177,9 @@ void updateInstance()
           }
          if (explain_btn != null) {
             explain_btn.setEnabled(true);
+          }
+         if (retry_btn != null && initial_response == Boolean.TRUE) {
+            retry_btn.setEnabled(true);
           }
          submit_btn.setEnabled(true);
          break;
@@ -281,9 +289,12 @@ private void setupPanel()
    if (!for_instance.getAutoQuery()) {
       explain_btn = addBottomButton("Explain","EXPLAIN",true,
             new ExplainAction());
+      retry_btn = null;
     }
    else {
       explain_btn = null;
+      retry_btn = addBottomButton("Try Again","RETRY",true,
+            new RetryAction());
     }
    locations_btn = addBottomButton("Locations","LOCS",true,
          new LocationsAction());
@@ -414,6 +425,32 @@ private final class ExplainAction extends AbstractAction implements ResponseHand
 }       // end of inner class ExplainAction
 
 
+private final class RetryAction extends AbstractAction implements ResponseHandler {
+
+   private static final long serialVersionUID = 1;
+   
+   RetryAction() {
+      super("Retry the explanation");
+    }
+   
+   @Override public void actionPerformed(ActionEvent evt) {
+      String query = "Try that explanation again.";
+      AskLimbaCommand cmd = new AskLimbaCommand("RETRY",null);
+      cmd.start();
+      String disp = "<div align='right'><p style='text-indent: 50px;'><font color='blue'>" + query + 
+            "</font></p></div>";
+      appendOutput(disp);
+    }
+   
+   @Override public void handleResponse(Element xml) {
+      have_explanation = true;
+      Responder resp = new Responder();
+      resp.handleResponse(xml);
+    }
+   
+}       // end of inner class RetryAction
+
+
 
 private final class LocationsAction extends AbstractAction implements ResponseHandler {
 
@@ -452,17 +489,24 @@ private final class RepairsAction extends AbstractAction implements ResponseHand
    
    @Override public void actionPerformed(ActionEvent evt) {
       String query = "Find repairs for this symptom";
-      AskLimbaCommand cmd = new AskLimbaCommand("LOCATIONS",null);
+      AskLimbaCommand cmd = new AskLimbaCommand("REPAIRS",null,this);
       cmd.start();
       String disp = "<div align='right'><p style='text-indent: 50px;'><font color='blue'>" + query + 
             "</font></p></div>";
       appendOutput(disp);
     }
    
-   @Override public void handleResponse(Element xml) {
+   @Override public void handleResponse(Element xml0) {
       // should go through response and find patches for each repair
       // then should use SEEDE to validate the repair and then make the patch
       // Actually, the validation should be done inside DIAD
+      Element xml = xml0;
+      if (!IvyXml.isElement(xml,"RESULT")) {
+         xml = IvyXml.getChild(xml,"RESULT");
+       }
+      for (Element patch : IvyXml.children(xml,"PATCH")) {
+         IvyLog.logD("LIMBA","DO patch:  " + IvyXml.getText(patch));
+       }
       Responder resp = new Responder();
       resp.handleResponse(xml);
     }

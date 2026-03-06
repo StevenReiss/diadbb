@@ -1,17 +1,17 @@
 Bird.tab.initial	:	white
-Bird.tab.finding_symptom :	 blue
-Bird.tab.no_symptom_found :	blue
-Bird.tab.doing_analysis :	cyan
-Bird.tab.finding_all_locations : violet
-Bird.tab.finding_starting_frame : magenta
-Bird.tab.doing_base_execution : yellow2
-Bird.tab.finding_executed_locations : yellow1
-Bird.tab.preparing_data :  yellow
-Bird.tab.doing_query : yellowgreen
+Bird.tab.finding_symptom :	255,255,127
+Bird.tab.no_symptom_found :	170,255,255
+Bird.tab.doing_analysis :	255,255,191
+Bird.tab.finding_all_locations : 216,255,139
+Bird.tab.finding_starting_frame : 212,255,127
+Bird.tab.doing_base_execution : 162,255,255
+Bird.tab.finding_executed_locations : 216,255,139
+Bird.tab.preparing_data    :  170,170,255
+Bird.tab.doing_query :		174,255,131
 Bird.tab.ready		:	green
 Bird.panel.background	:	#a5dd86
-
-
+Bird.value.error.color	:	red
+Bird.value.color	:	black
 
 
 
