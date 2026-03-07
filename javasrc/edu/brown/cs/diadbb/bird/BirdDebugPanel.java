@@ -26,6 +26,10 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.swing.AbstractAction;
 import javax.swing.JButton;
@@ -76,6 +80,10 @@ private JButton         retry_btn;
 private boolean         doing_query;
 private Boolean         initial_response;
 private boolean         have_explanation;
+
+private static final Pattern HUNK_HEADER_PATTERN = 
+   Pattern.compile("^@@ -(\\d+),?(\\d*) \\+(\\d+),?(\\d*) @@.*");
+
 
 private static final long serialVersionUID = 1;
 
@@ -505,11 +513,41 @@ private final class RepairsAction extends AbstractAction implements ResponseHand
          xml = IvyXml.getChild(xml,"RESULT");
        }
       for (Element patch : IvyXml.children(xml,"PATCH")) {
-         IvyLog.logD("LIMBA","DO patch:  " + IvyXml.getText(patch));
+         convertPatchToEdits(IvyXml.getText(patch));
        }
+      
+      // if we don't patch then send response to the user
       Responder resp = new Responder();
       resp.handleResponse(xml);
     }
+   
+   private List<BirdFileEdit> convertPatchToEdits(String patch)
+   {
+      IvyLog.logD("LIMBA","DO patch:  " + patch);
+      
+      List<BirdFileEdit> edits = new ArrayList<>();
+      String [] lines = patch.split("\n");
+      int tgtline = 0;
+      for (String line : lines) {
+         if (line.startsWith("@@")) {
+            Matcher matcher = HUNK_HEADER_PATTERN.matcher(line);
+            tgtline = Integer.parseInt(matcher.group(3)) -1;
+          }
+         else if (line.startsWith("+")) {
+            String cnt = line.substring(1);
+            edits.add(new BirdFileEdit(tgtline,0,cnt));
+            ++tgtline;
+          }
+         else if (line.startsWith("-")) {
+            edits.add(new BirdFileEdit(tgtline,1,""));
+          }
+         else if (line.startsWith(" ")) {
+            ++tgtline;
+          }
+       }
+      
+      return edits;
+   }
    
    
 }       // end of inner class RepairsAction

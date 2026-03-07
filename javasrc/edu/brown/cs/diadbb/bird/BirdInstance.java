@@ -27,7 +27,6 @@ import java.awt.Color;
 import org.w3c.dom.Element;
 
 import edu.brown.cs.bubbles.board.BoardColors;
-import edu.brown.cs.bubbles.board.BoardLog;
 import edu.brown.cs.ivy.xml.IvyXml;
 
 class BirdInstance implements BirdConstants
@@ -217,13 +216,13 @@ Color getTabColor()
          break;
     }
    
-   Color c1 = BoardColors.getPaleColor(c);
-   Color c2 = c.brighter();
-   Color c3 = new Color(c.getRed(),c.getGreen(),c.getBlue(),128);
-   BoardLog.logD("BIRD","Tab color " + vl + " " +
-         c + " " + c1 + " " + c2 + " " + c3);
-   
-   return c1;
+// Color c1 = BoardColors.getPaleColor(c);
+// Color c2 = c.brighter();
+// Color c3 = new Color(c.getRed(),c.getGreen(),c.getBlue(),128);
+// BoardLog.logD("BIRD","Tab color " + vl + " " +
+//       c + " " + c1 + " " + c2 + " " + c3);
+
+   return c;
 }
 
 

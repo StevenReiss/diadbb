@@ -38,7 +38,6 @@ import java.util.Set;
 
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.JComboBox;
-import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JTextField;
@@ -88,7 +87,6 @@ private JComboBox<DataPanel> symptom_panel;
 
 private BumpStackFrame for_frame;
 private BumpThread for_thread;
-private BumpStackFrame start_frame;
 private BaleFileOverview bale_file;
 private Map<String,Element> expression_data;
 private Element base_symptom;
@@ -137,14 +135,14 @@ BirdSymptomPanel(BirdInstance bi)
    if (for_thread != null) {
       Element frxml = IvyXml.getChild(inxml,"FRAME");
       String fidx = IvyXml.getAttrString(frxml,"ID");
-      Element stxml = IvyXml.getChild(inxml,"STARTFRAME");
-      String stidx = IvyXml.getAttrString(stxml,"ID");
       BumpThreadStack bs = for_thread.getStack();
       for (int i = 0; i < bs.getNumFrames(); ++i) {
          BumpStackFrame bsf = bs.getFrame(i);
          if (bsf == null) continue;
-         if (bsf.getId().equals(fidx)) for_frame = bsf;
-         if (bsf.getId().equals(stidx)) start_frame = bsf;
+         if (bsf.getId().equals(fidx)) {
+            for_frame = bsf;
+            break;
+          }
        }
       exception_type = for_thread.getExceptionType();
     }
@@ -248,8 +246,11 @@ private void updateSize()
 {
    Container cont = getTopLevelAncestor();
    Dimension d = cont.getPreferredSize();
-   if (d.width > 800) d.width = 800;
+   
    BoardLog.logD("BIRD","Update size " + cont.getSize() + " " + d);
+   if (d.width > 800) d.width = 800;
+   d.height += 40;
+   
    cont.setSize(d);
 }
 
@@ -277,14 +278,31 @@ private final class PanelSelector implements ActionListener {
 /*                                                                              */
 /********************************************************************************/
 
-private abstract static class DataPanel extends SwingGridPanel {
+private abstract class DataPanel extends SwingGridPanel {
 
+   protected Element given_xml;
    private static final long serialVersionUID = 1;
-
-   boolean isReady()                    { return true; }
-
+   
+   DataPanel() {
+      given_xml = IvyXml.getChild(for_instance.getXml(),"SYMPTOM");
+    }
+   
    abstract void outputXml(IvyXmlWriter xw);
-
+   
+   protected void copyField(IvyXmlWriter xw,String nm) {
+      String val = IvyXml.getAttrString(given_xml,nm);
+      if (val != null) {
+         xw.field(nm,val);
+       }
+    }
+   
+   protected void copyValue(IvyXmlWriter xw,String nm) {
+      String val = IvyXml.getTextElement(given_xml,nm);
+      if (val != null) {
+         xw.cdataElement(nm,val);
+       }
+    }
+   
    abstract String getPrompt();
 }
 
@@ -308,7 +326,9 @@ private final class LocationPanel extends DataPanel {
    private static final long serialVersionUID = 1;
 
    @Override void outputXml(IvyXmlWriter xw) {
-      // output XML for SHOULDNT be here
+      xw.begin("SYMPTOM");
+      xw.field("TYPE","LOCATION");
+      xw.end("SYMPTOM");
     }
 
    @Override String getPrompt() {
@@ -324,7 +344,16 @@ private final class ExceptionPanel extends DataPanel {
    private static final long serialVersionUID = 1;
 
    @Override void outputXml(IvyXmlWriter xw) {
-      // output XML for SHOULDNT be here
+      xw.begin("SYMPTOM");
+      xw.field("TYPE","EXCEPTION");
+      copyField(xw,"OPERATOR");
+      copyField(xw,"PRECISION");
+      copyValue(xw,"ITEM");
+      copyValue(xw,"VALUE");
+      copyValue(xw,"ORIGINAL");
+      copyValue(xw,"AUX");
+      copyValue(xw,"TARGET");
+      xw.end("SYMPTOM");
     }
 
    @Override String getPrompt() {
@@ -337,9 +366,22 @@ private final class ExceptionPanel extends DataPanel {
 private final class AssertionPanel extends DataPanel {
 
    private static final long serialVersionUID = 1;
+   
+   AssertionPanel() {
+      given_xml = IvyXml.getChild(for_instance.getXml(),"SYMPTOM");
+    }
 
    @Override void outputXml(IvyXmlWriter xw) {
-      // output XML for SHOULDNT be here
+      xw.begin("SYMPTOM");
+      xw.field("TYPE","ASSERTION");
+      copyField(xw,"OPERATOR");
+      copyField(xw,"PRECISION");
+      copyValue(xw,"ITEM");
+      copyValue(xw,"VALUE");
+      copyValue(xw,"ORIGINAL");
+      copyValue(xw,"AUX");
+      copyValue(xw,"TARGET");
+      xw.end("SYMPTOM");
     }
 
    @Override String getPrompt() {
@@ -354,7 +396,9 @@ private final class NonePanel extends DataPanel {
    private static final long serialVersionUID = 1;
 
    @Override void outputXml(IvyXmlWriter xw) {
-      // output XML for SHOULDNT be here
+      xw.begin("SYMPTOM");
+      xw.field("TYPE","NONE");
+      xw.end("SYMPTOM");
     }
 
    @Override String getPrompt() {
@@ -377,12 +421,10 @@ private abstract class VarExprPanel extends DataPanel implements ActionListener,
    private SwingComboBox<String> should_be;
    private JTextField other_value;
    private SwingGridPanel other_value_panel;
-   private boolean is_ready;
 
    private static final long serialVersionUID = 1;
 
    VarExprPanel() {
-      is_ready = false;
       setBackground(BoardColors.getColor("Bird.panel.background"));
       setOpaque(false);
       beginLayout();
@@ -415,8 +457,6 @@ private abstract class VarExprPanel extends DataPanel implements ActionListener,
       for (String elt : elts) variable_selector.addItem(elt);
     }
 
-   @Override boolean isReady()                           { return is_ready; }
-
    @Override public void actionPerformed(ActionEvent evt) {
       String what = getHeading();
       BoardLog.logD("BIRD",what + " action " + evt.getActionCommand() + " " + evt);
@@ -424,7 +464,6 @@ private abstract class VarExprPanel extends DataPanel implements ActionListener,
       switch (evt.getActionCommand()) {
          case "Expression" :
          case "Variable" :
-            setReady(false);
             String var = (String) variable_selector.getSelectedItem();
             BoardLog.logD("BIRD","Check variable " + var + " @ " +
                   variable_selector.getSelectedIndex());
@@ -473,6 +512,7 @@ private abstract class VarExprPanel extends DataPanel implements ActionListener,
          current_value.setText("???");
          should_be.setVisible(false);
          other_value_panel.setVisible(false);
+         updateSize();
        }
       else {
          current_value.setForeground(BoardColors.getColor("Bird.value.color"));
@@ -504,11 +544,6 @@ private abstract class VarExprPanel extends DataPanel implements ActionListener,
       return shd;
     }
 
-   private void setReady(boolean fg) {
-      is_ready = fg;
-      updateUI();
-    }
-
    private void setupShouldBe(BumpRunValue value) {
       List<String> alternatives = findAlternatives(value);
       other_value_panel.setVisible(false);
@@ -523,9 +558,18 @@ private abstract class VarExprPanel extends DataPanel implements ActionListener,
          should_be.setSelectedIndex(0);
          should_be.setVisible(true);
        }
-      setReady(true);
+      updateSize();
     }
-
+   
+   protected void outputXml(IvyXmlWriter xw,String type) {
+      // need operator,precision
+      xw.begin("SYMPTOM");
+      xw.field("TYPE",type);
+      xw.textElement("ITEM",getCurrentItem());
+      xw.cdataElement("VALUE",getCurrentValue());
+      xw.cdataElement("TARGET",getShouldBeValue());
+      xw.end("SYMPTOM");
+    }
 
 }       // end of inner class VarExprPanel
 
@@ -551,6 +595,7 @@ private class VariablePanel extends VarExprPanel {
     }
 
    @Override void outputXml(IvyXmlWriter xw) {
+      outputXml(xw,"VARIABLE");
     }
 
    @Override String getPrompt() {
@@ -601,6 +646,7 @@ private class ExpressionPanel extends VarExprPanel {
     }
 
    @Override void outputXml(IvyXmlWriter xw) {
+      outputXml(xw,"EXPRESSION");
     }
 
    @Override String getPrompt() {
