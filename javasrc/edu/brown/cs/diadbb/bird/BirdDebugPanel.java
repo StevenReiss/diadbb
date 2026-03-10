@@ -26,8 +26,11 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.File;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -45,9 +48,16 @@ import javax.swing.text.html.HTMLEditorKit;
 
 import org.w3c.dom.Element;
 
+import edu.brown.cs.bubbles.bale.BaleConstants;
+import edu.brown.cs.bubbles.bale.BaleFactory;
+import edu.brown.cs.bubbles.bass.BassFactory;
+import edu.brown.cs.bubbles.bass.BassName;
 import edu.brown.cs.bubbles.board.BoardColors;
 import edu.brown.cs.bubbles.board.BoardLog;
 import edu.brown.cs.bubbles.buda.BudaRoot;
+import edu.brown.cs.bubbles.buda.BudaConstants.BudaLinkStyle;
+import edu.brown.cs.bubbles.bump.BumpClient;
+import edu.brown.cs.bubbles.bump.BumpLocation;
 import edu.brown.cs.ivy.file.IvyFormat;
 import edu.brown.cs.ivy.file.IvyLog;
 import edu.brown.cs.ivy.mint.MintConstants.CommandArgs;
@@ -83,6 +93,9 @@ private boolean         have_explanation;
 
 private static final Pattern HUNK_HEADER_PATTERN = 
    Pattern.compile("^@@ -(\\d+),?(\\d*) \\+(\\d+),?(\\d*) @@.*");
+
+private static final Pattern LOCATION_PATTERN =
+   Pattern.compile("LOC::([^:]+)::([0-9]+)");
 
 
 private static final long serialVersionUID = 1;
@@ -460,12 +473,15 @@ private final class RetryAction extends AbstractAction implements ResponseHandle
 
 
 
-private final class LocationsAction extends AbstractAction implements ResponseHandler {
+private final class LocationsAction extends AbstractAction implements ResponseHandler, Runnable {
 
+   private List<BumpLocation> show_locations;
+   
    private static final long serialVersionUID = 1;
    
    LocationsAction() {
       super("Do Fault Localization");
+      show_locations = null;
     }
    
    @Override public void actionPerformed(ActionEvent evt) {
@@ -477,11 +493,60 @@ private final class LocationsAction extends AbstractAction implements ResponseHa
       appendOutput(disp);
     }
    
-   @Override public void handleResponse(Element xml) {
-      // should go through response and extract location information
-      // then we should create a bubble stack of the result.
-      Responder resp = new Responder();
-      resp.handleResponse(xml);
+   @Override public void handleResponse(Element xml0) {
+      Element xml = xml0;
+      if (!IvyXml.isElement(xml,"RESULT")) {
+         xml = IvyXml.getChild(xml,"RESULT");
+       }
+      
+      List<BumpLocation> locs = new ArrayList<>();
+      BaleFactory bf = BaleFactory.getFactory();
+      BassFactory bsf = BassFactory.getFactory();
+      BumpClient bc = BumpClient.getBump();
+      String text = IvyXml.getText(xml);
+      Matcher m = LOCATION_PATTERN.matcher(text);
+      Set<BassName> names = new HashSet<>();
+      Set<String> mnames = new HashSet<>();
+      while (m.find()) {
+         BoardLog.logD("BIRD","Found location " + m.group(1) + " " + 
+               m.group(2));
+         String fnm = m.group(1);
+         if (!fnm.endsWith(".java")) {
+            if (mnames.add(fnm)){
+               List<BumpLocation> mlocs = bc.findMethod(null,fnm,false);
+               // check the locs to ensure they contain the line number?
+               locs.addAll(mlocs);
+             }
+            continue;
+          }
+         File f = new File(fnm);
+         int line = Integer.parseInt(m.group(2));
+         BaleConstants.BaleFileOverview bfo = bf.getFileOverview(null,f);
+         if (bfo == null) continue;
+         int loff = bfo.findLineOffset(line);
+         int eoff = bfo.mapOffsetToEclipse(loff);
+         BassName bn = bsf.findBubbleName(f,eoff);
+         if (bn == null) continue;
+         if (names.add(bn)) {
+            locs.add(bn.getLocation());
+          }
+       }
+      if (!locs.isEmpty()) {
+         show_locations = new ArrayList<>(locs);
+         SwingUtilities.invokeLater(this);
+       }
+      else {
+         Responder resp = new Responder();
+         resp.handleResponse(xml);
+       }
+    }
+   
+   @Override public void run() {
+      BaleFactory bf = BaleFactory.getFactory();
+      bf.createBubbleStack(BirdDebugPanel.this,null,null,true,show_locations,
+            BudaLinkStyle.NONE); 
+      BoardLog.logD("BIRD","Done creating location information");
+      doing_query = false;
     }
    
 }       // end of inner class LocationsAction
