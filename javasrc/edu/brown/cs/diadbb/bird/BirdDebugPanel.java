@@ -26,11 +26,16 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
+import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -49,6 +54,7 @@ import javax.swing.text.html.HTMLEditorKit;
 import org.w3c.dom.Element;
 
 import edu.brown.cs.bubbles.bale.BaleConstants;
+import edu.brown.cs.bubbles.bale.BaleConstants.BaleFileOverview;
 import edu.brown.cs.bubbles.bale.BaleFactory;
 import edu.brown.cs.bubbles.bass.BassFactory;
 import edu.brown.cs.bubbles.bass.BassName;
@@ -93,6 +99,9 @@ private boolean         have_explanation;
 
 private static final Pattern HUNK_HEADER_PATTERN = 
    Pattern.compile("^@@ -(\\d+),?(\\d*) \\+(\\d+),?(\\d*) @@.*");
+
+private static final Pattern SOURCE_PATTERN = 
+   Pattern.compile("^--- ([^ ]+)( .*)?$");
 
 private static final Pattern LOCATION_PATTERN =
    Pattern.compile("LOC::([^:]+)::([0-9]+)");
@@ -485,7 +494,7 @@ private final class LocationsAction extends AbstractAction implements ResponseHa
     }
    
    @Override public void actionPerformed(ActionEvent evt) {
-      String query = "Find potential fault locations for this symptom";
+      String query = "Show the source for these changes";
       AskLimbaCommand cmd = new AskLimbaCommand("LOCATIONS",null,this);
       cmd.start();
       String disp = "<div align='right'><p style='text-indent: 50px;'><font color='blue'>" + query + 
@@ -547,21 +556,25 @@ private final class LocationsAction extends AbstractAction implements ResponseHa
             BudaLinkStyle.NONE); 
       BoardLog.logD("BIRD","Done creating location information");
       doing_query = false;
+      updateInstance();
     }
    
 }       // end of inner class LocationsAction
 
 
-private final class RepairsAction extends AbstractAction implements ResponseHandler {
+private final class RepairsAction extends AbstractAction implements ResponseHandler, Runnable {
 
+   private Collection<BirdFileEdit> repair_edits;
+   
    private static final long serialVersionUID = 1;
    
    RepairsAction() {
       super("Find Repairs");
+      repair_edits = null;
     }
    
    @Override public void actionPerformed(ActionEvent evt) {
-      String query = "Find repairs for this symptom";
+      String query = "Make the repairs for this symptom";
       AskLimbaCommand cmd = new AskLimbaCommand("REPAIRS",null,this);
       cmd.start();
       String disp = "<div align='right'><p style='text-indent: 50px;'><font color='blue'>" + query + 
@@ -577,41 +590,138 @@ private final class RepairsAction extends AbstractAction implements ResponseHand
       if (!IvyXml.isElement(xml,"RESULT")) {
          xml = IvyXml.getChild(xml,"RESULT");
        }
+      Collection<BirdFileEdit> edits = new TreeSet<>();
       for (Element patch : IvyXml.children(xml,"PATCH")) {
-         convertPatchToEdits(IvyXml.getText(patch));
+         Collection<BirdFileEdit> nedit = convertPatchToEdits(IvyXml.getText(patch));
+         if (nedit != null) edits.addAll(nedit);
        }
       
-      // if we don't patch then send response to the user
-      Responder resp = new Responder();
-      resp.handleResponse(xml);
+      if (edits.isEmpty()) {
+         Responder resp = new Responder();
+         resp.handleResponse(xml);
+       }
+      else {
+         repair_edits = edits;
+         SwingUtilities.invokeLater(this);
+       }
     }
    
-   private List<BirdFileEdit> convertPatchToEdits(String patch)
+   @Override public void run() {
+      for (BirdFileEdit bfe: repair_edits) {
+         bfe.doEdit(); 
+       }
+      repair_edits = null;
+      
+      doing_query = false;
+      updateInstance();
+   }
+   
+   private Collection<BirdFileEdit> convertPatchToEdits(String patch)
    {
       IvyLog.logD("LIMBA","DO patch:  " + patch);
       
-      List<BirdFileEdit> edits = new ArrayList<>();
-      String [] lines = patch.split("\n");
-      int tgtline = 0;
-      for (String line : lines) {
-         if (line.startsWith("@@")) {
-            Matcher matcher = HUNK_HEADER_PATTERN.matcher(line);
-            tgtline = Integer.parseInt(matcher.group(3)) -1;
+      BaleFactory bf = BaleFactory.getFactory();
+      Collection<BirdFileEdit> edits = new TreeSet<>();
+      int startpos = -1;
+      int endpos = -1;
+      int srcline = 0;
+      String insert = null;
+      BaleFileOverview file = null;
+      
+      try (BufferedReader br = new BufferedReader(new StringReader(patch))) {
+         for ( ; ; ) {
+            String line = br.readLine();
+            if (line == null) {
+               if (startpos > 0) {
+                  if (endpos < 0) {
+                     endpos = file.findLineOffset(srcline);
+                   }
+                  BirdFileEdit bfe = new BirdFileEdit(file,startpos,
+                        endpos,insert);
+                  edits.add(bfe);
+                }
+               break;
+             }
+            if (line.startsWith("--- ")) {
+               Matcher m1 = SOURCE_PATTERN.matcher(line);
+               if (m1.matches()) {
+                  String fnm = m1.group(1);
+                  File ff = findActualFile(fnm);
+                  // need to get actual file here
+                  file = bf.getFileOverview(null,ff);
+                }
+             }
+            else if (line.startsWith("+++ ")) ;
+            else if (line.startsWith("@@ ")) {
+               Matcher m2 = HUNK_HEADER_PATTERN.matcher(line);
+               if (m2.matches()) {
+                  srcline = Integer.parseInt(m2.group(1))+1;
+                  insert = null;
+                  startpos = -1;
+                  endpos = -1;
+                }
+             }
+            else if (line.startsWith(" ")) {
+               if (startpos > 0) {
+                  if (endpos < 0) {
+                     endpos = file.findLineOffset(srcline);
+                   }
+                  BirdFileEdit bfe = new BirdFileEdit(file,startpos,
+                        endpos,insert);
+                  edits.add(bfe);
+                  insert = null; 
+                  startpos = -1;
+                  endpos = -1;
+                }
+               ++srcline;
+             }
+            else if (line.startsWith("-")) {
+               if (startpos <= 0) {
+                  startpos = file.findLineOffset(srcline);
+                }
+               ++srcline;
+             }
+            else if (line.startsWith("+")) {
+               if (startpos <= 0) {
+                  startpos = file.findLineOffset(srcline);
+                }
+               if (endpos < 0) {
+                  endpos = file.findLineOffset(srcline);
+                }
+               String cnts = line.substring(1);
+               if (insert == null) insert = "";
+               insert += cnts + "\n";
+             }
           }
-         else if (line.startsWith("+")) {
-            String cnt = line.substring(1);
-            edits.add(new BirdFileEdit(tgtline,0,cnt));
-            ++tgtline;
-          }
-         else if (line.startsWith("-")) {
-            edits.add(new BirdFileEdit(tgtline,1,""));
-          }
-         else if (line.startsWith(" ")) {
-            ++tgtline;
+       }
+      catch (IOException e) { }
+      
+      return edits;
+   }
+   
+   private File findActualFile(String name)
+   {
+      if (name.startsWith("a/")) name = name.substring(1);
+      else if (name.startsWith("b/")) name = name.substring(1);
+      
+      File f1 = new File(name);
+      if (f1.exists()) return f1;
+      
+      if (name.endsWith(".java")) {
+         BumpClient bc = BumpClient.getBump();
+         int start = 0;
+         if (name.startsWith("/")) start = 1;
+         String n1 = name.substring(start,name.length()-5);
+         n1 = n1.replace("/",".");
+         n1 = n1.replace("$",".");
+         List<BumpLocation> bl = bc.findClassDefinition(null,n1);
+         if (bl != null && !bl.isEmpty()) {
+            BumpLocation loc = bl.get(0);
+            return loc.getFile();
           }
        }
       
-      return edits;
+      return f1;
    }
    
    
