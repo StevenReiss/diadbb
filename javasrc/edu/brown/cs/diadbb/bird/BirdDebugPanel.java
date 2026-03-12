@@ -60,6 +60,8 @@ import edu.brown.cs.bubbles.bass.BassFactory;
 import edu.brown.cs.bubbles.bass.BassName;
 import edu.brown.cs.bubbles.board.BoardColors;
 import edu.brown.cs.bubbles.board.BoardLog;
+import edu.brown.cs.bubbles.buda.BudaBubbleArea;
+import edu.brown.cs.bubbles.buda.BudaConstants;
 import edu.brown.cs.bubbles.buda.BudaRoot;
 import edu.brown.cs.bubbles.buda.BudaConstants.BudaLinkStyle;
 import edu.brown.cs.bubbles.bump.BumpClient;
@@ -607,9 +609,16 @@ private final class RepairsAction extends AbstractAction implements ResponseHand
     }
    
    @Override public void run() {
-      for (BirdFileEdit bfe: repair_edits) {
-         bfe.doEdit(); 
-       }
+      BirdPreviewBubble prev = new BirdPreviewBubble(BirdDebugPanel.this,repair_edits);
+      BudaBubbleArea bba = BudaRoot.findBudaBubbleArea(BirdDebugPanel.this);
+      bba.addBubble(prev,BirdDebugPanel.this,null,
+            BudaConstants.PLACEMENT_LOGICAL|BudaConstants.PLACEMENT_RIGHT);
+      prev.setVisible(true);
+      
+   // for (BirdFileEdit bfe: repair_edits) {
+   //    bfe.doEdit(); 
+   //  }
+      
       repair_edits = null;
       
       doing_query = false;
@@ -625,6 +634,9 @@ private final class RepairsAction extends AbstractAction implements ResponseHand
       int startpos = -1;
       int endpos = -1;
       int srcline = 0;
+      int startline = 0;
+      int delline = 0;
+      int addline = 0;
       String insert = null;
       BaleFileOverview file = null;
       
@@ -637,7 +649,8 @@ private final class RepairsAction extends AbstractAction implements ResponseHand
                      endpos = file.findLineOffset(srcline);
                    }
                   BirdFileEdit bfe = new BirdFileEdit(file,startpos,
-                        endpos,insert);
+                        endpos,insert,
+                        startline,addline,delline);
                   edits.add(bfe);
                 }
                break;
@@ -659,6 +672,9 @@ private final class RepairsAction extends AbstractAction implements ResponseHand
                   insert = null;
                   startpos = -1;
                   endpos = -1;
+                  addline = 0;
+                  delline = 0;
+                  startline = 0;
                 }
              }
             else if (line.startsWith(" ")) {
@@ -667,22 +683,29 @@ private final class RepairsAction extends AbstractAction implements ResponseHand
                      endpos = file.findLineOffset(srcline);
                    }
                   BirdFileEdit bfe = new BirdFileEdit(file,startpos,
-                        endpos,insert);
+                        endpos,insert,
+                        startline,addline,delline);
                   edits.add(bfe);
                   insert = null; 
                   startpos = -1;
                   endpos = -1;
+                  addline = 0;
+                  delline = 0;
+                  startline = 0;
                 }
                ++srcline;
              }
             else if (line.startsWith("-")) {
                if (startpos <= 0) {
+                  startline = srcline;
                   startpos = file.findLineOffset(srcline);
                 }
+               ++delline;
                ++srcline;
              }
             else if (line.startsWith("+")) {
                if (startpos <= 0) {
+                  startline = srcline;
                   startpos = file.findLineOffset(srcline);
                 }
                if (endpos < 0) {
@@ -691,6 +714,7 @@ private final class RepairsAction extends AbstractAction implements ResponseHand
                String cnts = line.substring(1);
                if (insert == null) insert = "";
                insert += cnts + "\n";
+               ++addline;
              }
           }
        }

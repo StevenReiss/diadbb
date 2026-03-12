@@ -24,8 +24,13 @@ package edu.brown.cs.diadbb.bird;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.swing.text.BadLocationException;
+import javax.swing.text.DefaultStyledDocument;
+
 import edu.brown.cs.bubbles.bale.BaleConstants.BaleFileOverview;
 import edu.brown.cs.bubbles.board.BoardLog;
+import edu.brown.cs.ivy.file.IvyFile;
+import edu.brown.cs.ivy.xml.IvyXmlWriter;
 
 class BirdFileEdit implements BirdConstants, Comparable<BirdFileEdit>
 {
@@ -42,6 +47,9 @@ private int     start_offset;
 private int     end_offset;
 private String  edit_replace;
 private int     edit_number;
+private int     start_line;
+private int     add_lines;
+private int     delete_lines;
 
 private static AtomicInteger edit_counter = new AtomicInteger(0);
 
@@ -53,14 +61,33 @@ private static AtomicInteger edit_counter = new AtomicInteger(0);
 /*                                                                              */
 /********************************************************************************/
 
-BirdFileEdit(BaleFileOverview bf,int offset,int end,String replace)
+BirdFileEdit(BaleFileOverview bf,int offset,int end,String replace,
+      int startline,int addline,int delline)
 {
    for_file = bf;
    start_offset = offset;;
    end_offset = end;
    edit_replace = replace;
    edit_number = edit_counter.incrementAndGet();
+   start_line = startline;
+   add_lines = addline;
+   delete_lines = delline;
 }
+
+
+
+/********************************************************************************/
+/*                                                                              */
+/*      Access methods                                                          */
+/*                                                                              */
+/********************************************************************************/
+
+BaleFileOverview getFile()              { return for_file; }
+
+int getStartLine()                      { return start_line; }
+
+int getStartOffset()                    { return start_offset; }
+int getEndOffset()                      { return end_offset; }
 
 
 /********************************************************************************/
@@ -81,6 +108,25 @@ boolean doEdit()
 }
 
 
+void applyEdit(DefaultStyledDocument doc,int delta) throws BadLocationException
+{
+   int off = start_offset - delta;
+   int len = end_offset - start_offset;
+   String text  = edit_replace;
+   if (text.isEmpty()) text = null;
+   if (text != null && len == 0) {
+      doc.insertString(off-delta,text,null);
+    }
+   else if (text == null) {
+      doc.remove(off,len);
+    }
+   else {
+      doc.replace(off,len,text,null);
+    }
+}
+
+
+
 
 /********************************************************************************/
 /*                                                                              */
@@ -98,6 +144,31 @@ boolean doEdit()
    return v;
 }
 
+
+
+/********************************************************************************/
+/*                                                                              */
+/*      Output methods                                                          */
+/*                                                                              */
+/********************************************************************************/
+
+void outputXml(IvyXmlWriter xw)
+{
+   xw.begin("TEXTEDIT");
+   String fnm = IvyFile.getCanonicalPath(for_file.getFile());
+   xw.field("FILE",fnm);
+   xw.field("OFFSET",start_offset);
+   xw.field("ENDOFFSET",end_offset);
+   xw.field("LENGTH",end_offset - start_offset);
+   xw.field("NUMBER",edit_number);
+   xw.field("STARTLINE",start_line);
+   xw.field("ADDLINES",add_lines);
+   xw.field("DELLINES",delete_lines);
+   if (edit_replace != null && !edit_replace.isEmpty()) {
+      xw.cdataElement("REPLACE",edit_replace);
+    }
+   xw.end("TEXTEDIT");
+}
 
 
 
