@@ -55,6 +55,7 @@ import edu.brown.cs.bubbles.bass.BassName;
 import edu.brown.cs.bubbles.board.BoardAttributes;
 import edu.brown.cs.bubbles.board.BoardColors;
 import edu.brown.cs.bubbles.board.BoardLog;
+import edu.brown.cs.bubbles.board.BoardProperties;
 import edu.brown.cs.bubbles.buda.BudaBubble;
 import edu.brown.cs.bubbles.bump.BumpLocation;
 import edu.brown.cs.ivy.swing.SwingGridPanel;
@@ -114,7 +115,7 @@ BirdPreviewBubble(BirdDebugPanel pnl,Collection<BirdFileEdit> edits)
    validate_field.setText("UNKNOWN");
    sgp.addLabellessRawComponent("EDITS",comp);
    sgp.addSeparator();
-   sgp.addBottomButton("REPAIRS","Make Repairs",new MakeRepairsAction());
+   sgp.addBottomButton("Make Repairs","REPAIRS",new MakeRepairsAction());
    sgp.addBottomButtons();
    
    setContentPane(sgp);
@@ -202,6 +203,7 @@ private void setupPreviewPanels()
       int m1 = loc.getDefinitionEndOffset();
       if (m0 == 0 || m1 == 0) continue;
       
+      int startline = bfo.findLineNumber(m0);
       List<Integer> origoffsets = new ArrayList<>();
       List<Position> editoffsets = new ArrayList<>();
       
@@ -226,7 +228,7 @@ private void setupPreviewPanels()
          for (BirdFileEdit be : edits) {
             be.applyEdit(d2,m0); 
           }
-         PreviewPanel pnl = new PreviewPanel(bn.getDisplayName(),d1,d2,0);
+         PreviewPanel pnl = new PreviewPanel(bn.getDisplayName(),d1,d2,startline);
          JTextPane otp = pnl.getOriginalEditor();
          JTextPane etp = pnl.getEditedEditor();
          for (int i = 0; i < origoffsets.size(); i += 2) {
@@ -280,13 +282,11 @@ private class PreviewPanel extends SwingGridPanel {
       addLabellessRawComponent("EDITS",codepanel);
       setBackground(BoardColors.getColor("Rose.background.color"));
       setOpaque(true);
-      if (start > 0) {
-         Dimension d = codepanel.getPreferredSize();
-         d.width += 2*MARGIN_WIDTH_PX + 6;
-         d.height = Math.max(d.height,400);
-         codepanel.setPreferredSize(d);
-       }
       
+      Dimension d = codepanel.getPreferredSize();
+      d.width += 2*MARGIN_WIDTH_PX + 6;
+      d.height = Math.min(d.height,600);
+      codepanel.setPreferredSize(d);
     }
    
    JTextPane getOriginalEditor()                        { return before_editor; }
@@ -303,7 +303,12 @@ private class PreviewEditor extends JTextPane {
    PreviewEditor(StyledDocument d) {
       super(d);
       setEditable(false);
+      setPreferredSize(new Dimension(300,400));
+      BoardProperties bp = BoardProperties.getProperties("Bird");
+      setFont(bp.getFont("Bird.preview.font"));
     }
+   
+   
 
 }       // end of inner class PreviewEditor
 

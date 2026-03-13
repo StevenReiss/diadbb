@@ -329,7 +329,7 @@ private void setupPanel()
       retry_btn = addBottomButton("Try Again","RETRY",true,
             new RetryAction());
     }
-   locations_btn = addBottomButton("Locations","LOCS",true,
+   locations_btn = addBottomButton("Sources","LOCS",true,
          new LocationsAction());
    repairs_btn = addBottomButton("Repairs","FIX",true,
          new RepairsAction());
