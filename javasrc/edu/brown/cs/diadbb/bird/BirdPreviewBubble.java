@@ -22,16 +22,27 @@
 
 package edu.brown.cs.diadbb.bird;
 
+import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.Point;
+import java.awt.event.ActionEvent;
+import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.swing.AbstractAction;
+import javax.swing.JComponent;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
+import javax.swing.JSplitPane;
+import javax.swing.JTextField;
 import javax.swing.JTextPane;
+import javax.swing.SwingUtilities;
 import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DefaultStyledDocument;
@@ -61,7 +72,9 @@ class BirdPreviewBubble extends BudaBubble implements BirdConstants
 
 private BirdDebugPanel  for_panel;
 private Collection<BirdFileEdit> repair_edits;
-private List<PreviewPanel> preview_panels;
+private Map<PreviewPanel,BassName> preview_panels;
+private Map<BassName,List<BirdFileEdit>> panel_edits;
+private JTextField      validate_field;
 
 private final short MARGIN_WIDTH_PX = 35;
 
@@ -77,19 +90,78 @@ private static final long serialVersionUID = 1;
 BirdPreviewBubble(BirdDebugPanel pnl,Collection<BirdFileEdit> edits)
 {
    for_panel = pnl;
-   repair_edits = edits;
+   repair_edits = new ArrayList<>(edits);
    
-   preview_panels = new ArrayList<>();
+   preview_panels = new LinkedHashMap<>();
+   panel_edits = new HashMap<>();
    
    setupPreviewPanels();
    
-   // create a SwingGridPane holding the preview panels and
-   //    bottom buttons for make repair, goto sources
+   JComponent comp = null;
+   for (PreviewPanel pp : preview_panels.keySet()) {
+      if (comp == null) comp = pp;
+      else {
+         comp = new JSplitPane(JSplitPane.VERTICAL_SPLIT,
+               comp,pp);
+       }
+    }
    
-   // handle popup menu based on preview panel
+   SwingGridPanel sgp = new SwingGridPanel();
+   sgp.beginLayout();
+   sgp.addBannerLabel("FIX: " + for_panel.getInstance().getSymptomString());
+   validate_field = sgp.addTextField("VALIDATE","Validation Status",null,null);
+   validate_field.setEditable(false);
+   validate_field.setText("UNKNOWN");
+   sgp.addLabellessRawComponent("EDITS",comp);
+   sgp.addSeparator();
+   sgp.addBottomButton("REPAIRS","Make Repairs",new MakeRepairsAction());
+   sgp.addBottomButtons();
+   
+   setContentPane(sgp);
 }
 
 
+
+/********************************************************************************/
+/*                                                                              */
+/*      Handle popup menu                                                       */
+/*                                                                              */
+/********************************************************************************/
+
+@Override public void handlePopupMenu(MouseEvent e) 
+{
+   JPopupMenu menu = new JPopupMenu();
+   
+   Point pt = new Point(e.getXOnScreen(),e.getYOnScreen());
+   SwingUtilities.convertPointFromScreen(pt,this);
+   Component c = SwingUtilities.getDeepestComponentAt(this,pt.x,pt.y);
+   while (c != null) {
+      BassName bn = preview_panels.get(c);
+      if (bn != null) {
+         menu.add(new RemovePanelAction((PreviewPanel) c));
+         menu.add(new ShowSourceAction(bn));
+         break;
+       }
+      else if (c == this) break;
+      c = c.getParent();
+    }
+   
+   menu.add(getFloatBubbleAction());
+   
+   menu.show(this,e.getX(),e.getY());
+}
+
+
+/********************************************************************************/
+/*                                                                              */
+/*      Handle validation status                                                */
+/*                                                                              */
+/********************************************************************************/
+
+void setValidationStatus(String sts)
+{
+   validate_field.setText(sts);
+}
 
 
 /********************************************************************************/
@@ -101,7 +173,6 @@ BirdPreviewBubble(BirdDebugPanel pnl,Collection<BirdFileEdit> edits)
 private void setupPreviewPanels()
 {
    BassFactory bsf = BassFactory.getFactory();
-   Map<BassName,List<BirdFileEdit>> nameedits = new HashMap<>();
    
    for (BirdFileEdit bfe : repair_edits) {
       BaleFileOverview bfo = bfe.getFile();
@@ -110,15 +181,19 @@ private void setupPreviewPanels()
       int eoff = bfo.mapOffsetToEclipse(loff);
       BassName bn = bsf.findBubbleName(bfo.getFile(),eoff);
       if (bn == null) continue;
-      List<BirdFileEdit> eds = nameedits.get(bn);
+      List<BirdFileEdit> eds = panel_edits.get(bn);
       if (eds == null) {
          eds = new ArrayList<>();
-         nameedits.put(bn,eds);
+         panel_edits.put(bn,eds);
        }
       eds.add(bfe);
     }
    
-   for (Map.Entry<BassName,List<BirdFileEdit>> ent : nameedits.entrySet()) {
+   BoardAttributes atts = new BoardAttributes("Bird");
+   AttributeSet oldedit = atts.getAttributes("Original");
+   AttributeSet newedit = atts.getAttributes("Edited");
+   
+   for (Map.Entry<BassName,List<BirdFileEdit>> ent : panel_edits.entrySet()) {
       List<BirdFileEdit> edits = ent.getValue();
       BaleFileOverview bfo = edits.get(0).getFile();
       BassName bn = ent.getKey();
@@ -126,9 +201,6 @@ private void setupPreviewPanels()
       int m0 = loc.getDefinitionOffset();
       int m1 = loc.getDefinitionEndOffset();
       if (m0 == 0 || m1 == 0) continue;
-      BoardAttributes atts = new BoardAttributes("Bird");
-      AttributeSet oldedit = atts.getAttributes("Original");
-      AttributeSet newedit = atts.getAttributes("Edited");
       
       List<Integer> origoffsets = new ArrayList<>();
       List<Position> editoffsets = new ArrayList<>();
@@ -146,6 +218,8 @@ private void setupPreviewPanels()
             if (s1 > m1-m0) s1 = m1-1;
             Position p0 = d2.createPosition(s0 - 1);
             Position p1 = d2.createPosition(s1 + 1);
+            origoffsets.add(s0);
+            origoffsets.add(s1);
             editoffsets.add(p0);
             editoffsets.add(p1);
           }
@@ -165,7 +239,7 @@ private void setupPreviewPanels()
             etp.select(e0,e1);
             etp.setCharacterAttributes(newedit,true);
           }
-         preview_panels.add(pnl);
+         preview_panels.put(pnl,bn);
        }
       catch (BadLocationException e) {
          BoardLog.logE("BIRD","Problem getting text for preview",e);
@@ -209,6 +283,7 @@ private class PreviewPanel extends SwingGridPanel {
       if (start > 0) {
          Dimension d = codepanel.getPreferredSize();
          d.width += 2*MARGIN_WIDTH_PX + 6;
+         d.height = Math.max(d.height,400);
          codepanel.setPreferredSize(d);
        }
       
@@ -231,6 +306,63 @@ private class PreviewEditor extends JTextPane {
     }
 
 }       // end of inner class PreviewEditor
+
+
+
+/********************************************************************************/
+/*                                                                              */
+/*      Action methods                                                          */
+/*                                                                              */
+/********************************************************************************/
+  
+private class RemovePanelAction extends AbstractAction {
+  
+   private PreviewPanel for_panel;
+   private static final long serialVersionUID = 1;
+   
+   RemovePanelAction(PreviewPanel pnl) {
+      super("Remove these Edits");
+      for_panel = pnl;
+    }
+   
+   @Override public void actionPerformed(ActionEvent evt) {
+      // do something
+    }
+   
+}       // end of inner class RemovePanelAction
+
+
+
+private class ShowSourceAction extends AbstractAction {
+   
+   private BassName for_name;
+   private static final long serialVersionUID = 1; 
+   
+   ShowSourceAction(BassName bn) {
+      super("Show Source Editor");
+      for_name = bn;
+    }
+   
+   @Override public void actionPerformed(ActionEvent evt) {
+      // do something
+    }
+
+}       // end of inner class ShowSourceAction
+
+
+private class MakeRepairsAction extends AbstractAction {
+   
+   private static final long serialVersionUID = 1; 
+   
+   MakeRepairsAction() {
+      super("Make the Repairs");
+    }
+   
+   @Override public void actionPerformed(ActionEvent evt) {
+      // do something
+    }
+   
+}       // end of inner class MakeRepairsAction
 
 
 

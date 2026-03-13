@@ -72,6 +72,7 @@ import edu.brown.cs.ivy.mint.MintConstants.CommandArgs;
 import edu.brown.cs.ivy.swing.SwingGridPanel;
 import edu.brown.cs.ivy.swing.SwingWrappingEditorPane;
 import edu.brown.cs.ivy.xml.IvyXml;
+import edu.brown.cs.ivy.xml.IvyXmlWriter;
 
 class BirdDebugPanel extends SwingGridPanel implements BirdConstants
 {
@@ -615,6 +616,17 @@ private final class RepairsAction extends AbstractAction implements ResponseHand
             BudaConstants.PLACEMENT_LOGICAL|BudaConstants.PLACEMENT_RIGHT);
       prev.setVisible(true);
       
+      CommandArgs args = new CommandArgs("DEBUGID",for_instance.getId());
+      IvyXmlWriter xw = new IvyXmlWriter();
+      xw.begin("EDITS");
+      for (BirdFileEdit bfe : repair_edits) {
+         bfe.outputXml(xw);
+       }
+      xw.end("EDITS");
+      String cnts = xw.closeResult();
+      BirdFactory bf = BirdFactory.getFactory();
+      bf.issueXmlCommand("VALIDATE",args,cnts,new ValidateHandler(prev));
+      
    // for (BirdFileEdit bfe: repair_edits) {
    //    bfe.doEdit(); 
    //  }
@@ -751,6 +763,28 @@ private final class RepairsAction extends AbstractAction implements ResponseHand
    
 }       // end of inner class RepairsAction
 
+
+private final class ValidateHandler implements ResponseHandler, Runnable {
+
+   private BirdPreviewBubble preview_panel;
+   private String validation_status;
+   
+   ValidateHandler(BirdPreviewBubble pnl) {
+      preview_panel = pnl;
+      validation_status = "UNKNOWN";
+    }
+   
+   @Override public void handleResponse(Element xml) {
+      Element velt = IvyXml.getChild(xml,"VALIDATION");
+      validation_status = IvyXml.getAttrString(velt,"STATUS");
+      SwingUtilities.invokeLater(this);
+    }
+   
+   @Override public void run() {
+      preview_panel.setValidationStatus(validation_status); 
+    }
+   
+}
 
 
 private final class SubmitAction implements ActionListener {

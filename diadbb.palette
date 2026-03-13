@@ -7,7 +7,7 @@ Bird.tab.finding_starting_frame : 212,255,127
 Bird.tab.doing_base_execution : 162,255,255
 Bird.tab.finding_executed_locations : 216,255,139
 Bird.tab.preparing_data    :  170,170,255
-Bird.tab.doing_query :		174,255,131
+Bird.tab.doing_query :		200,225,131
 Bird.tab.ready		:	green
 Bird.panel.background	:	#a5dd86
 Bird.value.error.color	:	red
