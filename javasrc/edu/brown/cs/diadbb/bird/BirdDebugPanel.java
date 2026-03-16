@@ -453,6 +453,7 @@ private final class ExplainAction extends AbstractAction implements ResponseHand
       have_explanation = true;
       Responder resp = new Responder();
       resp.handleResponse(xml);
+      updateInstance();
     }
    
 }       // end of inner class ExplainAction
@@ -626,10 +627,6 @@ private final class RepairsAction extends AbstractAction implements ResponseHand
       String cnts = xw.closeResult();
       BirdFactory bf = BirdFactory.getFactory();
       bf.issueXmlCommand("VALIDATE",args,cnts,new ValidateHandler(prev));
-      
-   // for (BirdFileEdit bfe: repair_edits) {
-   //    bfe.doEdit(); 
-   //  }
       
       repair_edits = null;
       

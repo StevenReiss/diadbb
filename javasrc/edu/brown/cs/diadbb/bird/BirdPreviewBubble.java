@@ -57,6 +57,8 @@ import edu.brown.cs.bubbles.board.BoardColors;
 import edu.brown.cs.bubbles.board.BoardLog;
 import edu.brown.cs.bubbles.board.BoardProperties;
 import edu.brown.cs.bubbles.buda.BudaBubble;
+import edu.brown.cs.bubbles.buda.BudaBubbleArea;
+import edu.brown.cs.bubbles.buda.BudaRoot;
 import edu.brown.cs.bubbles.bump.BumpLocation;
 import edu.brown.cs.ivy.swing.SwingGridPanel;
 import edu.brown.cs.ivy.swing.SwingLineScrollPane;
@@ -320,7 +322,7 @@ private class PreviewEditor extends JTextPane {
 /*                                                                              */
 /********************************************************************************/
   
-private class RemovePanelAction extends AbstractAction {
+private class RemovePanelAction extends AbstractAction implements Runnable {
   
    private PreviewPanel for_panel;
    private static final long serialVersionUID = 1;
@@ -331,14 +333,24 @@ private class RemovePanelAction extends AbstractAction {
     }
    
    @Override public void actionPerformed(ActionEvent evt) {
-      // do something
+      BassName bn = preview_panels.get(for_panel);
+      List<BirdFileEdit> edits = panel_edits.get(bn);
+      if (edits != null) {
+         repair_edits.removeAll(edits);
+         SwingUtilities.invokeLater(this);
+       }
+    }
+   
+   @Override public void run() {
+      // might want to more sophisticated in setting up SplitPane
+      for_panel.setVisible(false);
     }
    
 }       // end of inner class RemovePanelAction
 
 
 
-private class ShowSourceAction extends AbstractAction {
+private class ShowSourceAction extends AbstractAction implements Runnable {
    
    private BassName for_name;
    private static final long serialVersionUID = 1; 
@@ -349,13 +361,23 @@ private class ShowSourceAction extends AbstractAction {
     }
    
    @Override public void actionPerformed(ActionEvent evt) {
-      // do something
+      SwingUtilities.invokeLater(this);
+    }
+   
+   @Override public void run() {
+      BudaBubble bb = for_name.createBubble();
+      if (bb == null) return;
+      BudaBubbleArea bba = BudaRoot.findBudaBubbleArea(BirdPreviewBubble.this);
+      if (bba != null) {
+         bba.addBubble(bb,BirdPreviewBubble.this,null,
+               PLACEMENT_LOGICAL|PLACEMENT_MOVETO);
+       }
     }
 
 }       // end of inner class ShowSourceAction
 
 
-private class MakeRepairsAction extends AbstractAction {
+private class MakeRepairsAction extends AbstractAction implements Runnable {
    
    private static final long serialVersionUID = 1; 
    
@@ -364,7 +386,13 @@ private class MakeRepairsAction extends AbstractAction {
     }
    
    @Override public void actionPerformed(ActionEvent evt) {
-      // do something
+      SwingUtilities.invokeLater(this);
+    }
+   
+   @Override public void run() {
+      for (BirdFileEdit bfe : repair_edits) {
+         bfe.doEdit();
+       }
     }
    
 }       // end of inner class MakeRepairsAction
