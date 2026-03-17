@@ -220,6 +220,7 @@ private void setupPreviewPanels()
             int s1 = be.getEndOffset() - m0;
             if (s0 < 0) s0 = 0;
             if (s1 > m1-m0) s1 = m1-1;
+            BoardLog.logD("BIRD","Find edit " + s0 + " " + s1 + " " + m0 + " " + m1);
             Position p0 = d2.createPosition(s0 - 1);
             Position p1 = d2.createPosition(s1 + 1);
             origoffsets.add(s0);

@@ -107,7 +107,10 @@ private static final Pattern SOURCE_PATTERN =
    Pattern.compile("^--- ([^ ]+)( .*)?$");
 
 private static final Pattern LOCATION_PATTERN =
-   Pattern.compile("LOC::([^:]+)::([0-9]+)");
+   Pattern.compile("LOC\\!\\!([^!]+)\\!\\!([0-9]+)");
+
+// private static final Pattern LOCATION_PATTERN1 =
+// Pattern.compile("LOC::([^:]+)::([0-9]+)");
 
 
 private static final long serialVersionUID = 1;
@@ -160,6 +163,7 @@ void updateInstance()
       String resp = for_instance.getResponse();
       if (resp != null && !resp.isEmpty()) {
          String query = "Explain the problem";
+         resp = IvyFormat.formatText(resp);
          DisplayResponse dr = new DisplayResponse(query,resp);
          SwingUtilities.invokeLater(dr);
          initial_response = true;
@@ -498,7 +502,7 @@ private final class LocationsAction extends AbstractAction implements ResponseHa
     }
    
    @Override public void actionPerformed(ActionEvent evt) {
-      String query = "Show the source for these changes";
+      String query = "Show the relevant sources";
       AskLimbaCommand cmd = new AskLimbaCommand("LOCATIONS",null,this);
       cmd.start();
       String disp = "<div align='right'><p style='text-indent: 50px;'><font color='blue'>" + query + 
@@ -578,7 +582,7 @@ private final class RepairsAction extends AbstractAction implements ResponseHand
     }
    
    @Override public void actionPerformed(ActionEvent evt) {
-      String query = "Make the repairs for this symptom";
+      String query = "Show the repairs for this symptom";
       AskLimbaCommand cmd = new AskLimbaCommand("REPAIRS",null,this);
       cmd.start();
       String disp = "<div align='right'><p style='text-indent: 50px;'><font color='blue'>" + query + 
