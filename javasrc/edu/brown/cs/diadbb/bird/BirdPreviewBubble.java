@@ -22,8 +22,10 @@
 
 package edu.brown.cs.diadbb.bird;
 
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.Insets;
 import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.MouseEvent;
@@ -114,7 +116,7 @@ BirdPreviewBubble(BirdDebugPanel pnl,Collection<BirdFileEdit> edits)
    sgp.addBannerLabel("FIX: " + for_panel.getInstance().getSymptomString());
    validate_field = sgp.addTextField("VALIDATE","Validation Status",null,null);
    validate_field.setEditable(false);
-   validate_field.setText("UNKNOWN");
+   setValidationStatus("UNKNOWN");
    sgp.addLabellessRawComponent("EDITS",comp);
    sgp.addSeparator();
    sgp.addBottomButton("Make Repairs","REPAIRS",new MakeRepairsAction());
@@ -164,6 +166,26 @@ BirdPreviewBubble(BirdDebugPanel pnl,Collection<BirdFileEdit> edits)
 void setValidationStatus(String sts)
 {
    validate_field.setText(sts);
+   
+   Color bkg = null;
+   if (sts != null) {
+      if (sts.contains("UNKNOWN") || sts.contains("MAYBE")) {
+         bkg = BoardColors.getColor("Bird.valid.unknown");
+       }
+      else if (sts.equals("VALID")) {
+         bkg = BoardColors.getColor("Bird.valid.valid");
+       }
+      else if (sts.contains("INVALID")) {
+         bkg = BoardColors.getColor("Bird.valid.invalid");
+       }
+      else if (sts.startsWith("VALID_")) {
+         bkg = BoardColors.getColor("Bird.valid.likely");
+       }
+      else {
+         bkg = BoardColors.getColor("Bird.valid.unknown");
+       }
+    }
+   if (bkg != null) validate_field.setBackground(bkg);
 }
 
 
@@ -283,7 +305,7 @@ private class PreviewPanel extends SwingGridPanel {
       codepanel.addGBComponent(new JSeparator(JSeparator.VERTICAL),1,0,1,1,0,10);
       codepanel.addGBComponent(asp,2,0,1,1,10,10);
       addLabellessRawComponent("EDITS",codepanel);
-      setBackground(BoardColors.getColor("Rose.background.color"));
+      setBackground(BoardColors.getColor("Bird.panel.background"));
       setOpaque(true);
       
       Dimension d = codepanel.getPreferredSize();
@@ -307,6 +329,7 @@ private class PreviewEditor extends JTextPane {
       super(d);
       setEditable(false);
       setPreferredSize(new Dimension(300,400));
+      setMargin(new Insets(2,5,2,5));
       BoardProperties bp = BoardProperties.getProperties("Bird");
       setFont(bp.getFont("Bird.preview.font"));
     }

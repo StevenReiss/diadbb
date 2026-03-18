@@ -460,7 +460,7 @@ private abstract class VarExprPanel extends DataPanel implements ActionListener,
    @Override public void actionPerformed(ActionEvent evt) {
       String what = getHeading();
       BoardLog.logD("BIRD",what + " action " + evt.getActionCommand() + " " + evt);
-
+   
       switch (evt.getActionCommand()) {
          case "Expression" :
          case "Variable" :

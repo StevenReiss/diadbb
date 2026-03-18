@@ -48,6 +48,7 @@ import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
+import javax.swing.text.BadLocationException;
 import javax.swing.text.html.HTMLDocument;
 import javax.swing.text.html.HTMLEditorKit;
 
@@ -573,15 +574,18 @@ private final class LocationsAction extends AbstractAction implements ResponseHa
 private final class RepairsAction extends AbstractAction implements ResponseHandler, Runnable {
 
    private Collection<BirdFileEdit> repair_edits;
+   private int num_retries;
    
    private static final long serialVersionUID = 1;
    
    RepairsAction() {
       super("Find Repairs");
       repair_edits = null;
+      num_retries = 0;
     }
    
    @Override public void actionPerformed(ActionEvent evt) {
+      num_retries = 0;
       String query = "Show the repairs for this symptom";
       AskLimbaCommand cmd = new AskLimbaCommand("REPAIRS",null,this);
       cmd.start();
@@ -599,9 +603,20 @@ private final class RepairsAction extends AbstractAction implements ResponseHand
          xml = IvyXml.getChild(xml,"RESULT");
        }
       Collection<BirdFileEdit> edits = new TreeSet<>();
-      for (Element patch : IvyXml.children(xml,"PATCH")) {
-         Collection<BirdFileEdit> nedit = convertPatchToEdits(IvyXml.getText(patch));
-         if (nedit != null) edits.addAll(nedit);
+      try {
+         for (Element patch : IvyXml.children(xml,"PATCH")) {
+            Collection<BirdFileEdit> nedit = convertPatchToEdits(IvyXml.getText(patch));
+            if (nedit != null) edits.addAll(nedit);
+          }
+       }
+      catch (BirdException e) {
+         if (num_retries++ < 3) {
+            String msg = e.getMessage();
+            String retry = "That is an incorrect patch. " + msg + " Try again.";
+            AskLimbaCommand cmd = new AskLimbaCommand("QUERY",retry,this);
+            cmd.start();
+            return;
+          }
        }
       
       if (edits.isEmpty()) {
@@ -639,6 +654,7 @@ private final class RepairsAction extends AbstractAction implements ResponseHand
    }
    
    private Collection<BirdFileEdit> convertPatchToEdits(String patch)
+      throws BirdException 
    {
       IvyLog.logD("LIMBA","DO patch:  " + patch);
       
@@ -705,6 +721,23 @@ private final class RepairsAction extends AbstractAction implements ResponseHand
                   addline = 0;
                   delline = 0;
                   startline = 0;
+                }
+               int pos0 = file.findLineOffset(srcline);
+               int pos1 = file.findLineOffset(srcline+1) - 1;
+               try {
+                  String ln1 = file.getText(pos0,pos1-pos0);
+                  ln1 = ln1.trim().replace("\t","");
+                  ln1 = ln1.replace(" ","");
+                  String ln0 = line.trim().replace("\t","");
+                  ln0 = ln0.replace(" ","");
+                  if (!ln0.equals(ln1)) {
+                     BoardLog.logD("BIRD","Possible bad patch " +
+                           ln0 + " " + ln1);
+                     throw new BirdException("The context lines don't match the patch.");
+                   }
+                }
+               catch (BadLocationException e) {
+                  BoardLog.logD("BIRD","Problem looking at line text",e);
                 }
                ++srcline;
              }

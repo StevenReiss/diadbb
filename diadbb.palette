@@ -12,6 +12,40 @@ Bird.tab.ready		:	green
 Bird.panel.background	:	#a5dd86
 Bird.value.error.color	:	red
 Bird.value.color	:	black
+Bird.valid.unknown	:	170,255,255
+Bird.valid.valid	:	green
+Bird.valid.invalid	:	red
+Bird.valid.maybe	:	250,255,153
+Bird.valid.likely	:	198,255,112
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
