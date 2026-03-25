@@ -81,7 +81,7 @@ private Map<PreviewPanel,BassName> preview_panels;
 private Map<BassName,List<BirdFileEdit>> panel_edits;
 private JTextField      validate_field;
 
-private final short MARGIN_WIDTH_PX = 35;
+private static final short MARGIN_WIDTH_PX = 35;
 
 private static final long serialVersionUID = 1;
 
