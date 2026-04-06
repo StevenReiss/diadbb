@@ -61,6 +61,7 @@ import edu.brown.cs.bubbles.bass.BassFactory;
 import edu.brown.cs.bubbles.bass.BassName;
 import edu.brown.cs.bubbles.board.BoardColors;
 import edu.brown.cs.bubbles.board.BoardLog;
+import edu.brown.cs.bubbles.board.BoardProperties;
 import edu.brown.cs.bubbles.buda.BudaBubbleArea;
 import edu.brown.cs.bubbles.buda.BudaConstants;
 import edu.brown.cs.bubbles.buda.BudaRoot;
@@ -202,7 +203,20 @@ void updateInstance()
          initial_response = false;
          doing_query = true;
          break;
-
+         
+      case NO_ANALYSIS :
+      case NO_LOCATIONS_FOUND :
+      case NO_BASE_EXECUTION :
+      case NO_FINAL_LOCATIONS :
+         if (symptom_btn != null) symptom_btn.setEnabled(true);
+         if (explain_btn != null) {
+            explain_btn.setEnabled(true);
+          }  
+         if (retry_btn != null && initial_response == Boolean.TRUE) {
+            retry_btn.setEnabled(true);
+          }
+         submit_btn.setEnabled(true);
+         break;
       case READY :
          if (initial_response == Boolean.FALSE) {
             doing_query = false;
@@ -447,7 +461,24 @@ private final class ExplainAction extends AbstractAction implements ResponseHand
    
    @Override public void actionPerformed(ActionEvent evt) {
       String query = "Explain the root cause of the problem";
-      AskLimbaCommand cmd = new AskLimbaCommand("EXPLAIN",null);
+      String xcmd = "EXPLAIN";
+      if (for_instance != null) {
+         switch (for_instance.getState()) {
+            case READY :
+            case DOING_QUERY :
+               xcmd = "EXPLAIN";
+               break;
+            default :
+               xcmd = "BASEEXPLAIN";
+               break;      
+          }
+       }
+      BoardProperties bp = BoardProperties.getProperties("BIRD");
+      if (bp.getBoolean("Bird.explain.simple")) {
+         xcmd = "BASEEXPLAIN";
+       }
+      
+      AskLimbaCommand cmd = new AskLimbaCommand(xcmd,null);
       cmd.start();
       String disp = "<div align='right'><p style='text-indent: 50px;'><font color='blue'>" + query + 
             "</font></p></div>";
@@ -587,7 +618,23 @@ private final class RepairsAction extends AbstractAction implements ResponseHand
    @Override public void actionPerformed(ActionEvent evt) {
       num_retries = 0;
       String query = "Show the repairs for this symptom";
-      AskLimbaCommand cmd = new AskLimbaCommand("REPAIRS",null,this);
+      String xcmd = "REPAIRS";
+      if (for_instance != null) {
+         switch (for_instance.getState()) {
+            case READY :
+            case DOING_QUERY :
+               xcmd = "REPAIRS";
+               break;
+            default :
+               xcmd = "BASEREPAIRS";
+               break;      
+          }
+       }
+      BoardProperties bp = BoardProperties.getProperties("BIRD");
+      if (bp.getBoolean("Bird.explain.simple")) {
+         xcmd = "BASEREPAIRS";
+       }
+      AskLimbaCommand cmd = new AskLimbaCommand(xcmd,null,this);
       cmd.start();
       String disp = "<div align='right'><p style='text-indent: 50px;'><font color='blue'>" + query + 
             "</font></p></div>";

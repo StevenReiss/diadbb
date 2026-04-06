@@ -204,12 +204,14 @@ Color getTabColor()
       case READY :
          c = BoardColors.getColor("Bird.tab." + vl);
          break;
-      case NO_USER_STACK :
       case NO_ANALYSIS :
-      case NO_START_FRAME :
       case NO_LOCATIONS_FOUND :
       case NO_BASE_EXECUTION :
       case NO_FINAL_LOCATIONS :
+         c = BoardColors.getColor("Bird.tab.simple");
+         break;
+      case NO_USER_STACK :
+      case NO_START_FRAME :
       case DEAD :
       case INTERRUPTED :
          c = Color.RED;
