@@ -217,12 +217,6 @@ Color getTabColor()
          c = Color.RED;
          break;
     }
-   
-// Color c1 = BoardColors.getPaleColor(c);
-// Color c2 = c.brighter();
-// Color c3 = new Color(c.getRed(),c.getGreen(),c.getBlue(),128);
-// BoardLog.logD("BIRD","Tab color " + vl + " " +
-//       c + " " + c1 + " " + c2 + " " + c3);
 
    return c;
 }
@@ -244,6 +238,13 @@ boolean isShouldSave()                          { return should_save; }
 void setShouldSave(boolean fg)                  { should_save = fg; }
 
 Element getXml()                                { return instance_xml; }
+
+String getStartFrameId() {
+   Element xml = IvyXml.getChild(instance_xml,"STARTFRAME");
+   Element xml1 = IvyXml.getChild(xml,"FRAME");
+   String id = IvyXml.getAttrString(xml1,"ID");
+   return id;
+}
 
 
 

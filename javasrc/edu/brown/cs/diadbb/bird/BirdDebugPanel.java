@@ -71,6 +71,7 @@ import edu.brown.cs.bubbles.bump.BumpLocation;
 import edu.brown.cs.ivy.file.IvyFormat;
 import edu.brown.cs.ivy.file.IvyLog;
 import edu.brown.cs.ivy.mint.MintConstants.CommandArgs;
+import edu.brown.cs.ivy.swing.SwingComboBox;
 import edu.brown.cs.ivy.swing.SwingGridPanel;
 import edu.brown.cs.ivy.swing.SwingWrappingEditorPane;
 import edu.brown.cs.ivy.xml.IvyXml;
@@ -409,9 +410,75 @@ private final class StartFrameAction extends AbstractAction {
     }
    
    @Override public void actionPerformed(ActionEvent evt) {
+     CommandArgs args = new CommandArgs("DEBUGID",for_instance.getId());
+     Element xml = BirdFactory.getFactory().sendDiadMessage("STARTFRAME",
+           args,null);
+     List<FrameElement> choices = new ArrayList<>();
+     FrameElement sel = null;
+     String sid = for_instance.getStartFrameId(); 
+     for (Element frm : IvyXml.children(IvyXml.getChild(xml,"FRAMES"))) {
+       FrameElement fe = new FrameElement(frm);
+       if (fe.isValid()) {
+          choices.add(fe);
+          if (fe.getId().equals(sid)) sel = fe;
+        }
+      }
+     if (choices.isEmpty()) return;
+     
+     FrameElement [] elts = choices.toArray(new FrameElement[choices.size()]);
+     Object rslt = JOptionPane.showInputDialog(BirdDebugPanel.this,
+           null,"Choose Starting Frame",
+           JOptionPane.QUESTION_MESSAGE,null,
+           elts,sel);
+      if (rslt == null) return;
+      
+      FrameElement fe = (FrameElement) rslt;
+      
+      args = new CommandArgs("DEBUGID",for_instance.getId(),
+            "FRAME",fe.getId());
+      BirdFactory.getFactory().sendDiadMessage("STARTFRAME",
+            args,null);
     }
    
 }       // end of inner class StartFrameAction
+
+
+private final class FrameElement {
+
+   private Element frame_xml;
+   
+   FrameElement(Element xml) {
+      frame_xml = xml;
+    }
+   
+   boolean isValid() {
+      String cls = IvyXml.getAttrString(frame_xml,"CLASS");
+      if (cls.contains("java.lang.invoke")) return false;
+      if (cls.contains("jdk.internal.reflect")) return false;
+      if (cls.contains("java.lang.reflect.Method")) return false;
+      if (cls.matches(".*\\$[0-9]+")) return false;
+      
+      return true;
+    }
+   
+   String getId() {
+      return IvyXml.getAttrString(frame_xml,"ID");
+    }
+   
+   @Override public String toString() {
+      String cls = IvyXml.getAttrString(frame_xml,"CLASS");
+      String mthd = IvyXml.getAttrString(frame_xml,"METHOD");
+      String line = IvyXml.getAttrString(frame_xml,"LINE");
+      
+      String rslt = cls + "." + mthd;
+      if (line != null && IvyXml.getAttrBool(frame_xml,"USER")) {
+         rslt += " @ " + line;
+       }
+      
+      return rslt;
+    }
+
+}
 
 
 private final class SymptomAction extends AbstractAction {
