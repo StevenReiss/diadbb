@@ -28,6 +28,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.ArrayList;
@@ -42,12 +43,14 @@ import java.util.regex.Pattern;
 import javax.swing.AbstractAction;
 import javax.swing.JButton;
 import javax.swing.JEditorPane;
+import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.html.HTMLDocument;
 import javax.swing.text.html.HTMLEditorKit;
@@ -71,7 +74,6 @@ import edu.brown.cs.bubbles.bump.BumpLocation;
 import edu.brown.cs.ivy.file.IvyFormat;
 import edu.brown.cs.ivy.file.IvyLog;
 import edu.brown.cs.ivy.mint.MintConstants.CommandArgs;
-import edu.brown.cs.ivy.swing.SwingComboBox;
 import edu.brown.cs.ivy.swing.SwingGridPanel;
 import edu.brown.cs.ivy.swing.SwingWrappingEditorPane;
 import edu.brown.cs.ivy.xml.IvyXml;
@@ -283,6 +285,10 @@ void addPopupButtons(JPopupMenu menu)
    menu.add(new StartFrameAction());
    if (for_instance.shouldRemove() && for_instance.isShouldSave()) {
       menu.add(new RemoveAction());
+    }
+   if (for_instance.isShouldSave()) {
+      menu.add(new SaveAction());
+      menu.add(new PrintAction());
     }
 }
 
@@ -516,6 +522,61 @@ private final class RemoveAction extends AbstractAction {
     }
    
 }       // end of inner class RemoveAction
+
+
+private final class PrintAction extends AbstractAction {
+
+   private static final long serialVersionUID = 1L;
+   
+   PrintAction() {
+      super("Print Transcript");
+    }
+   
+   @Override public void actionPerformed(ActionEvent evt) {
+      try {
+         log_pane.print();
+       }
+      catch (java.awt.print.PrinterException e) {
+         BoardLog.logE("BIRD","Problem printing transcript",e);
+       }
+    }
+      
+}       // end of inner class PrintAction
+
+
+
+private final class SaveAction extends AbstractAction {
+   
+   private static final long serialVersionUID = 1L;
+
+   SaveAction() {
+      super("Save Transcript");
+    }
+   
+   @Override public void actionPerformed(ActionEvent evt) {
+      JFileChooser chooser = new JFileChooser();
+      chooser.setDialogTitle("Choose html file to save transcript in");
+      chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+      chooser.setFileFilter(new FileNameExtensionFilter("HTML File",
+            "html","htm"));
+      int retval = chooser.showSaveDialog(BirdDebugPanel.this);
+      if (retval == JFileChooser.APPROVE_OPTION){
+         File f = chooser.getSelectedFile();
+         String cnts = log_pane.getText();
+         // might need to prepend <html> and append \n
+         try (FileWriter fw = new FileWriter(f)) {
+            fw.write(cnts);
+          }
+         catch (IOException e) {
+            BoardLog.logE("BIRD","Save to file " + f + " failed",e);
+          }
+       }
+    }
+   
+}       // end of inner class SaveAction
+
+
+
 
 
 private final class ExplainAction extends AbstractAction implements ResponseHandler {
