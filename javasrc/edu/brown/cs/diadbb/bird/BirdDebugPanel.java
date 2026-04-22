@@ -283,10 +283,11 @@ void addPopupButtons(JPopupMenu menu)
       menu.add(new SymptomAction());
     }
    menu.add(new StartFrameAction());
-   if (for_instance.shouldRemove() && for_instance.isShouldSave()) {
+   if (for_instance.shouldRemove() || for_instance.isShouldSave()) {
       menu.add(new RemoveAction());
     }
    if (for_instance.isShouldSave()) {
+      menu.add(new RestartAction());
       menu.add(new SaveAction());
       menu.add(new PrintAction());
     }
@@ -577,6 +578,25 @@ private final class SaveAction extends AbstractAction {
 
 
 
+private final class RestartAction extends AbstractAction {
+   
+   private static final long serialVersionUID = 1;
+   
+   RestartAction() {
+      super("Restart the Analysis");
+    }
+   
+   @Override public void actionPerformed(ActionEvent evt) {
+      CommandArgs args = new CommandArgs("DEBUGID",for_instance.getId());
+      BirdFactory.getFactory().sendDiadMessage("CLEARHISTORY",args,null);
+      if (for_instance.getAutoQuery()) {
+         ExplainAction exp = new ExplainAction();
+         exp.actionPerformed(evt);
+       }
+    }
+   
+}       // end of inner class RestartAction
+
 
 
 private final class ExplainAction extends AbstractAction implements ResponseHandler {
@@ -787,8 +807,9 @@ private final class RepairsAction extends AbstractAction implements ResponseHand
       catch (BirdException e) {
          if (num_retries++ < 3) {
             String msg = e.getMessage();
-            String retry = "That is an incorrect patch. " + msg + " Try again.";
-            AskLimbaCommand cmd = new AskLimbaCommand("QUERY",retry,this);
+            String retry = "That is an invalid patch. " +
+                  msg + " Try again.";
+            AskLimbaCommand cmd = new AskLimbaCommand("REPAIRS",retry,this);
             cmd.start();
             return;
           }
@@ -908,7 +929,7 @@ private final class RepairsAction extends AbstractAction implements ResponseHand
                   if (!ln0.equals(ln1)) {
                      BoardLog.logD("BIRD","Possible bad patch " +
                            ln0 + " " + ln1);
-                     throw new BirdException("The context lines don't match the patch.");
+                     throw new BirdException(" The patch lines or line numbers do not match the source.");
                    }
                 }
                catch (BadLocationException e) {
