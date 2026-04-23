@@ -113,6 +113,8 @@ private static final Pattern SOURCE_PATTERN =
 
 private static final Pattern LOCATION_PATTERN =
    Pattern.compile("LOC\\!\\!([^!]+)\\!\\!([0-9]+)");
+private static final Pattern ALT_LOCATION_PATTERN =
+   Pattern.compile("LOC\\!\\!([^!]+)\\!\\!([^!]+)\\!\\!([0-9]+)");
 
 // private static final Pattern LOCATION_PATTERN1 =
 // Pattern.compile("LOC::([^:]+)::([0-9]+)");
@@ -653,11 +655,14 @@ private final class RetryAction extends AbstractAction implements ResponseHandle
    
    @Override public void actionPerformed(ActionEvent evt) {
       String query = "Try that explanation again.";
-      AskLimbaCommand cmd = new AskLimbaCommand("RETRY",null);
+      String cnts = input_area.getText();
+      if (cnts.isBlank()) cnts = null;
+      AskLimbaCommand cmd = new AskLimbaCommand("RETRY",cnts);
       cmd.start();
       String disp = "<div align='right'><p style='text-indent: 50px;'><font color='blue'>" + query + 
             "</font></p></div>";
       appendOutput(disp);
+      input_area.setText("");
     }
    
    @Override public void handleResponse(Element xml) {
@@ -704,30 +709,45 @@ private final class LocationsAction extends AbstractAction implements ResponseHa
       Matcher m = LOCATION_PATTERN.matcher(text);
       Set<BassName> names = new HashSet<>();
       Set<String> mnames = new HashSet<>();
-      while (m.find()) {
-         BoardLog.logD("BIRD","Found location " + m.group(1) + " " + 
-               m.group(2));
-         String fnm = m.group(1);
-         if (!fnm.endsWith(".java")) {
-            if (mnames.add(fnm)){
+      for (int i = 0; i < 2; ++i) {
+         while (m.find()) {
+            BoardLog.logD("BIRD","Found location " + m.group(1) + " " + 
+                  m.group(2));
+            String fnm = m.group(1);
+            int lngrp = 2;
+            if (!fnm.endsWith(".java")) {
+               if (i == 1) {
+                  fnm = fnm + "." + m.group(2);
+                  lngrp = 3;
+                }
+               if (!mnames.add(fnm)) continue;
                List<BumpLocation> mlocs = bc.findMethod(null,fnm,false);
                // check the locs to ensure they contain the line number?
-               locs.addAll(mlocs);
+               if (mlocs != null && !mlocs.isEmpty()) {
+                  locs.addAll(mlocs);
+                  continue;
+                }
+               List<BumpLocation> clocs = bc.findClassDefinition(null,fnm);
+               if (clocs != null && !clocs.isEmpty()) {
+                  BumpLocation cloc = clocs.get(0);
+                  fnm = cloc.getFile().getPath();
+                }
              }
-            continue;
+            File f = new File(fnm);
+            int line = Integer.parseInt(m.group(lngrp));
+            BaleConstants.BaleFileOverview bfo = bf.getFileOverview(null,f);
+            if (bfo == null) continue;
+            int loff = bfo.findLineOffset(line);
+            int eoff = bfo.mapOffsetToEclipse(loff);
+            BassName bn = bsf.findBubbleName(f,eoff);
+            if (bn == null) continue;
+            if (names.add(bn)) {
+               locs.add(bn.getLocation());
+             }
           }
-         File f = new File(fnm);
-         int line = Integer.parseInt(m.group(2));
-         BaleConstants.BaleFileOverview bfo = bf.getFileOverview(null,f);
-         if (bfo == null) continue;
-         int loff = bfo.findLineOffset(line);
-         int eoff = bfo.mapOffsetToEclipse(loff);
-         BassName bn = bsf.findBubbleName(f,eoff);
-         if (bn == null) continue;
-         if (names.add(bn)) {
-            locs.add(bn.getLocation());
-          }
+         m = ALT_LOCATION_PATTERN.matcher(text);
        }
+      
       if (!locs.isEmpty()) {
          show_locations = new ArrayList<>(locs);
          SwingUtilities.invokeLater(this);
@@ -798,9 +818,10 @@ private final class RepairsAction extends AbstractAction implements ResponseHand
          xml = IvyXml.getChild(xml,"RESULT");
        }
       Collection<BirdFileEdit> edits = new TreeSet<>();
+      int delta = (num_retries == 0 ? 0 : 4);
       try {
          for (Element patch : IvyXml.children(xml,"PATCH")) {
-            Collection<BirdFileEdit> nedit = convertPatchToEdits(IvyXml.getText(patch));
+            Collection<BirdFileEdit> nedit = convertPatchToEdits(IvyXml.getText(patch),delta);
             if (nedit != null) edits.addAll(nedit);
           }
        }
@@ -849,10 +870,10 @@ private final class RepairsAction extends AbstractAction implements ResponseHand
       updateInstance();
    }
    
-   private Collection<BirdFileEdit> convertPatchToEdits(String patch)
+   private Collection<BirdFileEdit> convertPatchToEdits(String patch,int delta)
       throws BirdException 
    {
-      IvyLog.logD("LIMBA","DO patch:  " + patch);
+      IvyLog.logD("LIMBA","DO patch " + delta + ":  " + patch);
       
       BaleFactory bf = BaleFactory.getFactory();
       Collection<BirdFileEdit> edits = new TreeSet<>();
@@ -864,6 +885,7 @@ private final class RepairsAction extends AbstractAction implements ResponseHand
       int addline = 0;
       String insert = null;
       BaleFileOverview file = null;
+      boolean maybeoff = false;
       
       try (BufferedReader br = new BufferedReader(new StringReader(patch))) {
          for ( ; ; ) {
@@ -893,13 +915,14 @@ private final class RepairsAction extends AbstractAction implements ResponseHand
             else if (line.startsWith("@@ ")) {
                Matcher m2 = HUNK_HEADER_PATTERN.matcher(line);
                if (m2.matches()) {
-                  srcline = Integer.parseInt(m2.group(1))+1;
+                  srcline = Integer.parseInt(m2.group(1))-delta;
                   insert = null;
                   startpos = -1;
                   endpos = -1;
                   addline = 0;
                   delline = 0;
                   startline = 0;
+                  maybeoff = true;
                 }
              }
             else if (line.startsWith(" ")) {
@@ -918,26 +941,14 @@ private final class RepairsAction extends AbstractAction implements ResponseHand
                   delline = 0;
                   startline = 0;
                 }
-               int pos0 = file.findLineOffset(srcline);
-               int pos1 = file.findLineOffset(srcline+1) - 1;
-               try {
-                  String ln1 = file.getText(pos0,pos1-pos0);
-                  ln1 = ln1.trim().replace("\t","");
-                  ln1 = ln1.replace(" ","");
-                  String ln0 = line.trim().replace("\t","");
-                  ln0 = ln0.replace(" ","");
-                  if (!ln0.equals(ln1)) {
-                     BoardLog.logD("BIRD","Possible bad patch " +
-                           ln0 + " " + ln1);
-                     throw new BirdException(" The patch lines or line numbers do not match the source.");
-                   }
-                }
-               catch (BadLocationException e) {
-                  BoardLog.logD("BIRD","Problem looking at line text",e);
-                }
+               srcline = checkLine(line,srcline,file,maybeoff);
+               if (!line.isEmpty()) maybeoff = false;
                ++srcline;
              }
             else if (line.startsWith("-")) {
+               srcline = checkLine(line.substring(1),srcline,
+                     file,maybeoff);
+               maybeoff = false;
                if (startpos <= 0) {
                   startline = srcline;
                   startpos = file.findLineOffset(srcline);
@@ -964,6 +975,41 @@ private final class RepairsAction extends AbstractAction implements ResponseHand
       
       return edits;
    }
+   
+   
+   private int checkLine(String line,int srcline,BaleFileOverview file,boolean maybeoff) 
+      throws BirdException
+   {
+      String ln1 = null;
+      String ln0 = line.trim().replace("\t","");
+      ln0 = ln0.replace(" ","");
+      
+      for (int i = 0; i < 4; ++i) {
+         int pos0 = file.findLineOffset(srcline);
+         int pos1 = file.findLineOffset(srcline+1) - 1;
+         try {
+            ln1 = file.getText(pos0,pos1-pos0);
+            ln1 = ln1.trim().replace("\t","");
+            ln1 = ln1.replace(" ","");
+            if (ln0.equals(ln1)) return srcline;
+            if (maybeoff) {
+               ++srcline;
+             }
+            else {
+               break;
+             }
+          }
+         catch (BadLocationException e) {
+            BoardLog.logD("BIRD","Problem looking at line text",e);
+          }
+       }
+      
+      BoardLog.logD("BIRD","Possible bad patch " +
+            ln0 + " " + ln1);
+      String msg = " The patch lines or line numbers do not match the source.";
+      throw new BirdException(msg);
+   }
+   
    
    private File findActualFile(String name)
    {
@@ -1050,7 +1096,7 @@ private final class Responder implements ResponseHandler, Runnable {
       String text = IvyXml.getTextElement(rslt,"RESPONSE");
       if (text == null) {
          BoardLog.logE("BAIT","Problem with response result: " +
-               IvyXml.convertXmlToString(rslt));
+               IvyXml.convertXmlToString(xml));
          text = "???";
        }
       

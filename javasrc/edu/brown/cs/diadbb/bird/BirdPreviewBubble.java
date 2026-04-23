@@ -199,6 +199,9 @@ private void setupPreviewPanels()
 {
    BassFactory bsf = BassFactory.getFactory();
    
+   int boffset = -1;
+   int aoffset = -1;
+   
    for (BirdFileEdit bfe : repair_edits) {
       BaleFileOverview bfo = bfe.getFile();
       int line = bfe.getStartLine();
@@ -261,10 +264,20 @@ private void setupPreviewPanels()
             int s1 = origoffsets.get(i+1);
             int e0 = editoffsets.get(i).getOffset()+1;
             int e1 = editoffsets.get(i+1).getOffset()-1;
+            if (boffset < 0) {
+               boffset = s0;
+               aoffset = e0;
+             }
             otp.select(s0,s1);
             otp.setCharacterAttributes(oldedit,true);
             etp.select(e0,e1);
             etp.setCharacterAttributes(newedit,true);
+          }
+         if (boffset >= 0) {
+            pnl.getOriginalEditor().setCaretPosition(boffset);
+            pnl.getEditedEditor().setCaretPosition(aoffset);
+            aoffset = -1;
+            boffset = -1;
           }
          preview_panels.put(pnl,bn);
        }
@@ -297,8 +310,11 @@ private class PreviewPanel extends SwingGridPanel {
       addSeparator();
       before_editor = new PreviewEditor(d1);
       after_editor = new PreviewEditor(d2);
-      JScrollPane bsp = new SwingLineScrollPane(before_editor,start);
+      SwingLineScrollPane bsp = new SwingLineScrollPane(before_editor,start);
       JScrollPane asp = new SwingLineScrollPane(after_editor,start);
+      BoardProperties bp = BoardProperties.getProperties("Bird");
+      Color c = bp.getColor("Original.foreground",Color.GREEN);
+      bsp.setLineColors(null,null,c);
       
       SwingGridPanel codepanel = new SwingGridPanel();
       codepanel.addGBComponent(bsp,0,0,1,1,10,10);
