@@ -1004,9 +1004,9 @@ private final class RepairsAction extends AbstractAction implements ResponseHand
           }
        }
       
-      BoardLog.logD("BIRD","Possible bad patch " +
+      BoardLog.logD("BIRD","Possible bad patch " + srcline + " " + 
             ln0 + " " + ln1);
-      String msg = " The patch lines or line numbers do not match the source.";
+      String msg = " The patch lines or line numbers do not match the source at " + srcline + ".";
       throw new BirdException(msg);
    }
    
