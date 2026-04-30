@@ -8,6 +8,7 @@ Bird.tab.doing_base_execution : 162,255,255
 Bird.tab.finding_executed_locations : 216,255,139
 Bird.tab.preparing_data    :  170,170,255
 Bird.tab.doing_query :		200,225,131
+Bird.tab.thinking :		200,225,131
 Bird.tab.ready		:	green
 Bird.tab.simple 	:	lightgreen
 Bird.panel.background	:	#a5dd86

@@ -46,6 +46,7 @@ enum DiadCandidateState {
    NO_FINAL_LOCATIONS,
    DEAD,
    INTERRUPTED,
+   THINKING,
 }
 
 

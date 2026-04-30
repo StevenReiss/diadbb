@@ -164,8 +164,7 @@ void updateInstance()
    
    location_text.setText(for_instance.getLocationString());
    symptom_text.setText(for_instance.getSymptomString());
-   state_text.setText(for_instance.getState().toString());
-   state_text.setBackground(for_instance.getTabColor());
+   
    if (initial_response == Boolean.FALSE) {
       String resp = for_instance.getResponse();
       if (resp != null && !resp.isEmpty()) {
@@ -178,6 +177,9 @@ void updateInstance()
          have_explanation = true;
        }
     }
+   
+   state_text.setText(getInstanceState().toString());
+   state_text.setBackground(for_instance.getTabColor());
    
    if (submit_btn == null) return;
    
@@ -192,11 +194,11 @@ void updateInstance()
    submit_btn.setEnabled(false);
    if (symptom_btn != null) symptom_btn.setEnabled(false);
    
-   BoardLog.logD("BIRD","Update instance " + doing_query + " " + for_instance.getState());
+   BoardLog.logD("BIRD","Update instance " + doing_query + " " + getInstanceState());
    
    if (doing_query) return;
    
-   switch (for_instance.getState()) {
+   switch (getInstanceState()) {
       default :
          break; 
       case NO_SYMPTOM_FOUND :
@@ -223,6 +225,7 @@ void updateInstance()
          submit_btn.setEnabled(true);
          break;
       case READY :
+      case THINKING :
          if (initial_response == Boolean.FALSE) {
             doing_query = false;
             initial_response = null;
@@ -280,7 +283,7 @@ private class DisplayResponse implements Runnable {
 
 void addPopupButtons(JPopupMenu menu)
 {
-   DiadCandidateState state = for_instance.getState();
+   DiadCandidateState state = getInstanceState();
    if (state != DiadCandidateState.INITIAL) {
       menu.add(new SymptomAction());
     }
@@ -310,7 +313,7 @@ private void setupPanel()
          null,null); 
    location_text.setEditable(false);
    
-   state_text = addTextField("State",for_instance.getState().toString(),
+   state_text = addTextField("State",getInstanceState().toString(),
          null,null); 
    state_text.setEditable(false);
    
@@ -368,6 +371,23 @@ private void setupPanel()
    setMinimumSize(new Dimension(400,250));
 }
 
+
+
+/********************************************************************************/
+/*                                                                              */
+/*      Helper methods                                                          */
+/*                                                                              */
+/********************************************************************************/
+
+private DiadCandidateState getInstanceState()
+{
+   DiadCandidateState state = for_instance.getState();
+   if (state == DiadCandidateState.READY && doing_query) {
+      state = DiadCandidateState.THINKING; 
+    }
+   
+   return state;
+}
 
 /********************************************************************************/
 /*                                                                              */
@@ -613,9 +633,10 @@ private final class ExplainAction extends AbstractAction implements ResponseHand
       String query = "Explain the root cause of the problem";
       String xcmd = "EXPLAIN";
       if (for_instance != null) {
-         switch (for_instance.getState()) {
+         switch (getInstanceState()) {
             case READY :
             case DOING_QUERY :
+            case THINKING :
                xcmd = "EXPLAIN";
                break;
             default :
@@ -788,9 +809,10 @@ private final class RepairsAction extends AbstractAction implements ResponseHand
       String query = "Show the repairs for this symptom";
       String xcmd = "REPAIRS";
       if (for_instance != null) {
-         switch (for_instance.getState()) {
+         switch (getInstanceState()) {
             case READY :
             case DOING_QUERY :
+            case THINKING :
                xcmd = "REPAIRS";
                break;
             default :
