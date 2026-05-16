@@ -40,6 +40,7 @@ import javax.swing.DefaultListCellRenderer;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JList;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
 import org.w3c.dom.Element;
@@ -80,6 +81,7 @@ private DataPanel exception_panel;
 private DataPanel location_panel;
 private VariablePanel variable_panel;
 private ExpressionPanel expression_panel;
+private OtherPanel other_panel;
 private DataPanel active_panel;
 private DataPanel none_panel;
 
@@ -178,6 +180,8 @@ private void createDisplay()
    assertion_panel.setVisible(false);
    location_panel = new LocationPanel();
    location_panel.setVisible(false);
+   other_panel = new OtherPanel();
+   other_panel.setVisible(false);
    none_panel = new NonePanel();
    none_panel.setVisible(false);
    active_panel = null;
@@ -200,13 +204,14 @@ private void createDisplay()
    choices.add(variable_panel);
    choices.add(expression_panel);
    choices.add(none_panel);
+   choices.add(other_panel);
 
    switch (symptyp) {
       case ASSERTION :
          active_panel = assertion_panel;
          break;
       case EXCEPTION :
-      case CAUGHT_EXCEPTION :
+      case LIBRARY_EXCEPTION :
          active_panel = exception_panel;
          break;
       case VARIABLE :
@@ -224,6 +229,9 @@ private void createDisplay()
       case NONE :
          active_panel = none_panel;
          break;
+      case OTHER :
+         active_panel = other_panel;
+         break; 
     }
 
    int idx = choices.indexOf(active_panel);
@@ -236,6 +244,7 @@ private void createDisplay()
    addLabellessRawComponent("ASSERTIONS",assertion_panel);
    addLabellessRawComponent("EXCEPTIONS",exception_panel);
    addLabellessRawComponent("LOCATIONS",location_panel);
+   addLabellessRawComponent("OTHER",other_panel);
    addLabellessRawComponent("NONE",none_panel);
 
    active_panel.setVisible(true);
@@ -367,9 +376,7 @@ private final class AssertionPanel extends DataPanel {
 
    private static final long serialVersionUID = 1;
    
-   AssertionPanel() {
-      given_xml = IvyXml.getChild(for_instance.getXml(),"SYMPTOM");
-    }
+   AssertionPanel() { }
 
    @Override void outputXml(IvyXmlWriter xw) {
       xw.begin("SYMPTOM");
@@ -446,7 +453,7 @@ private abstract class VarExprPanel extends DataPanel implements ActionListener,
       addLabellessRawComponent("OTHER",other_value_panel);
       other_value_panel.setVisible(false);
     }
-
+   
    protected abstract List<String> getElements();
    protected abstract String getHeading();
    protected BumpRunValue getValue(String what)                 { return null; }
@@ -672,6 +679,37 @@ private class ElementsFinder implements Runnable {
 }       // end of inner class ElementsFinder
 
 
+/********************************************************************************/
+/*                                                                              */
+/*      Panel for user-defined symptoms                                         */
+/*                                                                              */
+/********************************************************************************/
+
+private class OtherPanel extends DataPanel {
+   
+   private JTextArea other_value;
+   
+   private static final long serialVersionUID = 1;
+   
+   OtherPanel() { 
+      setBackground(BoardColors.getColor("Bird.panel.background"));
+      setOpaque(false);
+      beginLayout();
+      other_value = addTextArea("Describe Symptom","<Describe the problem>",null);
+    }
+   
+   @Override String getPrompt() {
+      return "Some Other Problem";
+    }
+   
+   @Override void outputXml(IvyXmlWriter xw) {
+      xw.begin("SYMPTOM");
+      xw.field("TYPE",DiadSymptomType.OTHER);
+      xw.cdataElement("USER",other_value.getText());
+      xw.end("SYMPTOM");
+    }
+   
+}
 
 
 /********************************************************************************/

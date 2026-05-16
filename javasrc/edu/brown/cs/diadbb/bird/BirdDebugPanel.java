@@ -525,6 +525,7 @@ private final class SymptomAction extends AbstractAction {
             JOptionPane.OK_CANCEL_OPTION,
             JOptionPane.PLAIN_MESSAGE,null,null,null);
       if (sts != JOptionPane.OK_OPTION) return;
+      // check if symptom is valid 
       // define new symptom and pass to diad
     }
    

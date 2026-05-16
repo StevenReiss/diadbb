@@ -150,12 +150,17 @@ String getSymptomString()
       case NEQ :
          ops = "!=";
          break;
+      case IN :
+         ops = "CONTAINS"; 
+         break;
+      case NOTIN :
+         ops = "NOT CONTAINS";
+         break;
     }
    
    switch (typ) {
       case NONE :
          return "No Symptom Found";
-      case CAUGHT_EXCEPTION : 
       case EXCEPTION :
          return "Exception " + getShortName(itm) + " was thrown";
       case ASSERTION :
@@ -180,6 +185,8 @@ String getSymptomString()
          return "Execution should not be here";
       case NO_EXCEPTION :
          return "Exception " + getShortName(itm) + " should have been thrown";
+      case OTHER :
+         return "other";
     }
    return "SYMPTOM";
 }

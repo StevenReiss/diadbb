@@ -58,12 +58,14 @@ enum DiadSymptomType {
    EXPRESSION,
    LOCATION,
    NO_EXCEPTION,
-   CAUGHT_EXCEPTION,
+   LIBRARY_EXCEPTION,
+   OTHER,
 }
 
 enum DiadValueOperator {
    NONE,
    EQL, NEQ, GTR, GEQ, LSS, LEQ,
+   IN, NOTIN,
 }
 
 
