@@ -37,9 +37,13 @@ import java.util.Map;
 import java.util.Set;
 
 import javax.swing.DefaultListCellRenderer;
+import javax.swing.JButton;
 import javax.swing.JComboBox;
+import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JList;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
@@ -84,6 +88,7 @@ private ExpressionPanel expression_panel;
 private OtherPanel other_panel;
 private DataPanel active_panel;
 private DataPanel none_panel;
+private JButton accept_button;
 
 private JComboBox<DataPanel> symptom_panel;
 
@@ -152,12 +157,51 @@ BirdSymptomPanel(BirdInstance bi)
       File fnm = for_frame.getFile();
       bale_file = BaleFactory.getFactory().getFileOverview(null,fnm);
     }
+   
+   Element sympxml = IvyXml.getChild(inxml,"SYMPTOM");
+   DiadSymptomType typ = IvyXml.getAttrEnum(sympxml,"TYPE",
+         DiadSymptomType.NONE);
+   switch (typ) {
+      case EXCEPTION :
+      case NO_EXCEPTION :
+      case LIBRARY_EXCEPTION :
+         if (exception_type == null) {
+            exception_type = IvyXml.getTextElement(sympxml,"ITEM");
+          }
+         break;
+      case ASSERTION :
+         if (exception_type == null) {
+            exception_type = "java.lang.AssertionError";
+          }
+    }   
 
    base_symptom = IvyXml.getChild(inxml,"SYMPTOM");
 
    createDisplay();
 }
 
+
+
+/********************************************************************************/
+/*                                                                              */
+/*      Show the option pane dialog                                             */
+/*                                                                              */
+/********************************************************************************/
+
+int showDialog(Component par)
+{
+   JOptionPane opt = new JOptionPane(this,JOptionPane.PLAIN_MESSAGE,
+         JOptionPane.OK_CANCEL_OPTION,null,null,null);
+   JDialog dlg = opt.createDialog(par,"Describe Problem Symptom");
+   JPanel opts = (JPanel) opt.getComponents()[1];
+   accept_button = (JButton) opts.getComponents()[0];
+   accept_button.setEnabled(false);
+   checKValid();
+   
+   dlg.setVisible(true);
+   
+   return (int) opt.getValue();
+}
 
 /********************************************************************************/
 /*                                                                              */
@@ -246,8 +290,9 @@ private void createDisplay()
    addLabellessRawComponent("LOCATIONS",location_panel);
    addLabellessRawComponent("OTHER",other_panel);
    addLabellessRawComponent("NONE",none_panel);
-
    active_panel.setVisible(true);
+   
+   accept_button = null;
 }
 
 
@@ -276,9 +321,22 @@ private final class PanelSelector implements ActionListener {
       active_panel = pnl;
       active_panel.setVisible(true);
       updateSize();
+      checKValid();
     }
 
 }       // end of inner class PanelSelector
+
+
+private void checKValid()
+{
+   boolean valid = true;
+   if (active_panel == null) valid = false;
+   else valid = active_panel.checkPanelValid();
+   
+   if (accept_button != null) {
+      accept_button.setEnabled(valid);
+    }
+}
 
 
 /********************************************************************************/
@@ -313,7 +371,10 @@ private abstract class DataPanel extends SwingGridPanel {
     }
    
    abstract String getPrompt();
-}
+   
+   abstract boolean checkPanelValid();                    
+    
+}       // end of inner class DataPanel
 
 
 private interface ValuePanel {
@@ -343,6 +404,10 @@ private final class LocationPanel extends DataPanel {
    @Override String getPrompt() {
       return "Shouldn't be at this location";
     }
+   
+   @Override boolean checkPanelValid() {
+      return true;
+    }
 
 }       // end of inner class LocationPanel
 
@@ -367,6 +432,10 @@ private final class ExceptionPanel extends DataPanel {
 
    @Override String getPrompt() {
       return "Exception " + exception_type + " should not be thrown";
+    }
+   
+   @Override boolean checkPanelValid() {
+      return true;
     }
 
 }       // end of inner class ExceptionPanel
@@ -394,7 +463,11 @@ private final class AssertionPanel extends DataPanel {
    @Override String getPrompt() {
       return "Assertion should be true";
     }
-
+   
+   @Override boolean checkPanelValid() {
+      return true;
+    }
+   
 }       // end of inner class AssertionPanel
 
 
@@ -411,7 +484,11 @@ private final class NonePanel extends DataPanel {
    @Override String getPrompt() {
       return "No symptom -- everything as expected";
     }
-
+   
+   @Override boolean checkPanelValid() {
+      return false;
+    }
+   
 }       // end of inner class NonePanel
 
 
@@ -471,7 +548,11 @@ private abstract class VarExprPanel extends DataPanel implements ActionListener,
       switch (evt.getActionCommand()) {
          case "Expression" :
          case "Variable" :
-            String var = (String) variable_selector.getSelectedItem();
+            int idx = variable_selector.getSelectedIndex();
+            String var = null;
+            if (idx > 0) {
+               var = (String) variable_selector.getSelectedItem();
+             }
             BoardLog.logD("BIRD","Check variable " + var + " @ " +
                   variable_selector.getSelectedIndex());
             BoardLog.logD("BIRD","Selections: " + variable_selector.getModel().getSize());
@@ -510,6 +591,8 @@ private abstract class VarExprPanel extends DataPanel implements ActionListener,
             BoardLog.logE("BIRD","Unknown " + what + " action " + evt.getActionCommand());
             break;
        }
+      
+      checKValid();
     }
 
    @Override public void setValue(String expr,BumpRunValue value,String err) {
@@ -549,6 +632,12 @@ private abstract class VarExprPanel extends DataPanel implements ActionListener,
          if (shd.equals("")) shd = null;
        }
       return shd;
+    }
+  
+   @Override boolean checkPanelValid() {
+      int idx = variable_selector.getSelectedIndex();
+      if (idx == 0) return false;
+      return true;
     }
 
    private void setupShouldBe(BumpRunValue value) {
@@ -688,6 +777,8 @@ private class ElementsFinder implements Runnable {
 private class OtherPanel extends DataPanel {
    
    private JTextArea other_value;
+   private JTextField other_vars;
+   private JTextField other_assert;
    
    private static final long serialVersionUID = 1;
    
@@ -695,7 +786,13 @@ private class OtherPanel extends DataPanel {
       setBackground(BoardColors.getColor("Bird.panel.background"));
       setOpaque(false);
       beginLayout();
-      other_value = addTextArea("Describe Symptom","<Describe the problem>",null);
+      other_value = addTextArea("Symptom",null,5,60,null);
+      other_value.setToolTipText("Give a description of the symptom or problem at this point");
+      other_vars = addTextField("Variables",null,null,null);
+      other_vars.setToolTipText("Optional semicolor-separated list of variables or simple\n" +
+            "expressions that affect the symptom");
+      other_assert = addTextField("Assertion",null,null,null);
+      other_assert.setToolTipText("Optional assertion to illustrate the problem");
     }
    
    @Override String getPrompt() {
@@ -706,10 +803,18 @@ private class OtherPanel extends DataPanel {
       xw.begin("SYMPTOM");
       xw.field("TYPE",DiadSymptomType.OTHER);
       xw.cdataElement("USER",other_value.getText());
+      xw.cdataElement("ITEM",other_vars.getText());
+      xw.cdataElement("ASSERT",other_assert.getText());
       xw.end("SYMPTOM");
     }
    
-}
+   @Override boolean checkPanelValid() {
+      if (other_value.getText() == null || other_value.getText().isEmpty()) return false;
+      
+      return true;
+    }
+   
+}       // end of inner class OtherPanel
 
 
 /********************************************************************************/

@@ -59,6 +59,7 @@ enum DiadSymptomType {
    LOCATION,
    NO_EXCEPTION,
    LIBRARY_EXCEPTION,
+   
    OTHER,
 }
 

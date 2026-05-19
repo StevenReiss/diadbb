@@ -515,17 +515,15 @@ private final class SymptomAction extends AbstractAction {
    private static final long serialVersionUID = 1;
    
    SymptomAction() {
-      super("Change Error Symptom");
+      super("Change Problem Symptom");
     }
    
    @Override public void actionPerformed(ActionEvent evt) {
       BirdSymptomPanel pnl = new BirdSymptomPanel(for_instance);
-      int sts = JOptionPane.showOptionDialog(BirdDebugPanel.this,pnl,
-            "Specify Problem Symptom",
-            JOptionPane.OK_CANCEL_OPTION,
-            JOptionPane.PLAIN_MESSAGE,null,null,null);
+      
+      int sts = pnl.showDialog(BirdDebugPanel.this);
       if (sts != JOptionPane.OK_OPTION) return;
-      // check if symptom is valid 
+      // check if symptom is valid  
       // define new symptom and pass to diad
     }
    
