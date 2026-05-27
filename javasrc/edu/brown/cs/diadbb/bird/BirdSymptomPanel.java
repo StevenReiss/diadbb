@@ -803,8 +803,8 @@ private class OtherPanel extends DataPanel {
       xw.begin("SYMPTOM");
       xw.field("TYPE",DiadSymptomType.OTHER);
       xw.cdataElement("USER",other_value.getText());
-      xw.cdataElement("ITEM",other_vars.getText());
-      xw.cdataElement("ASSERT",other_assert.getText());
+      xw.cdataElement("VARIABLES",other_vars.getText());
+      xw.cdataElement("ASSERTION",other_assert.getText());
       xw.end("SYMPTOM");
     }
    
