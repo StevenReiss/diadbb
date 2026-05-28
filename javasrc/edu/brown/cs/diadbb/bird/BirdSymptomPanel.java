@@ -46,6 +46,8 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.event.UndoableEditEvent;
+import javax.swing.event.UndoableEditListener;
 
 import org.w3c.dom.Element;
 
@@ -202,6 +204,21 @@ int showDialog(Component par)
    
    return (int) opt.getValue();
 }
+
+
+/********************************************************************************/
+/*                                                                              */
+/*      Access methods                                                          */
+/*                                                                              */
+/********************************************************************************/
+
+void getSymptomXml(IvyXmlWriter xw)
+{
+   if (active_panel == null) return;
+   active_panel.outputXml(xw);
+}
+
+
 
 /********************************************************************************/
 /*                                                                              */
@@ -774,7 +791,7 @@ private class ElementsFinder implements Runnable {
 /*                                                                              */
 /********************************************************************************/
 
-private class OtherPanel extends DataPanel {
+private class OtherPanel extends DataPanel implements UndoableEditListener {
    
    private JTextArea other_value;
    private JTextField other_vars;
@@ -786,12 +803,12 @@ private class OtherPanel extends DataPanel {
       setBackground(BoardColors.getColor("Bird.panel.background"));
       setOpaque(false);
       beginLayout();
-      other_value = addTextArea("Symptom",null,5,60,null);
+      other_value = addTextArea("Symptom",null,5,60,this);
       other_value.setToolTipText("Give a description of the symptom or problem at this point");
-      other_vars = addTextField("Variables",null,null,null);
+      other_vars = addTextField("Variables",null,null,this);
       other_vars.setToolTipText("Optional semicolor-separated list of variables or simple\n" +
             "expressions that affect the symptom");
-      other_assert = addTextField("Assertion",null,null,null);
+      other_assert = addTextField("Assertion",null,null,this);
       other_assert.setToolTipText("Optional assertion to illustrate the problem");
     }
    
@@ -813,6 +830,10 @@ private class OtherPanel extends DataPanel {
       
       return true;
     }
+   
+  @Override public void undoableEditHappened(UndoableEditEvent evt) {
+     checKValid();
+   }
    
 }       // end of inner class OtherPanel
 

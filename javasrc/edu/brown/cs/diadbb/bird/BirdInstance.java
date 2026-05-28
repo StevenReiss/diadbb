@@ -23,6 +23,8 @@
 package edu.brown.cs.diadbb.bird;
 
 import java.awt.Color;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.w3c.dom.Element;
 
@@ -41,6 +43,21 @@ class BirdInstance implements BirdConstants
 
 private Element         instance_xml;
 private boolean         should_save;
+
+private static final Map<DiadValueOperator,String> OP_NAMES;
+
+static {
+   OP_NAMES = new HashMap<>();
+   OP_NAMES.put(DiadValueOperator.EQL,"==");
+   OP_NAMES.put(DiadValueOperator.GEQ,">=");
+   OP_NAMES.put(DiadValueOperator.GTR,">");
+   OP_NAMES.put(DiadValueOperator.LEQ,"<=");
+   OP_NAMES.put(DiadValueOperator.LSS,"<");
+   OP_NAMES.put(DiadValueOperator.NEQ,"!=");
+   OP_NAMES.put(DiadValueOperator.IN,"CONTAINS");
+   OP_NAMES.put(DiadValueOperator.EQL,"NOT CONTAINS");
+}
+
 
 
 /********************************************************************************/
@@ -130,32 +147,9 @@ String getSymptomString()
    DiadValueOperator op = IvyXml.getAttrEnum(symp,"OPERATOR",DiadValueOperator.NONE);
    double prec = IvyXml.getAttrDouble(symp,"PRECISION",0);
    
-   String ops = op.toString();
-   switch (op) {
-      case EQL : 
-         ops = "==";
-         break;
-      case GEQ :
-         ops = ">=";
-         break;
-      case GTR :
-         ops = ">";
-         break;
-      case LEQ : 
-         ops = "<=";
-         break;
-      case LSS :
-         ops = "<";
-         break;
-      case NEQ :
-         ops = "!=";
-         break;
-      case IN :
-         ops = "CONTAINS"; 
-         break;
-      case NOTIN :
-         ops = "NOT CONTAINS";
-         break;
+   String ops = OP_NAMES.get(op);
+   if (ops == null) {
+      ops = op.toString();
     }
    
    switch (typ) {
@@ -163,6 +157,20 @@ String getSymptomString()
          return "No Symptom Found";
       case EXCEPTION :
          return "Exception " + getShortName(itm) + " was thrown";
+      case LIBRARY_EXCEPTION :
+         String rtn = IvyXml.getTextElement(symp,"ORIGINAL");
+         if (rtn != null && !rtn.isEmpty()) {
+            int idx = rtn.lastIndexOf(";");
+            if (rtn.equals("<init>")) rtn = "Constructor";
+            else if (idx > 0) {
+               rtn = "``" + rtn.substring(0,idx) + "''";
+             }
+            else rtn = "Method " + rtn;
+            return rtn + " throws " + getShortName(itm);
+          }
+         else {
+            return "Exception " + getShortName(itm) + " was thrown in library";
+          }
       case ASSERTION :
          String cnts = null;
          if (op != DiadValueOperator.NONE && orig != null && tgt != null) {
@@ -186,7 +194,9 @@ String getSymptomString()
       case NO_EXCEPTION :
          return "Exception " + getShortName(itm) + " should have been thrown";
       case OTHER :
-         return "other";
+         String desc = IvyXml.getTextElement(symp,"USER");
+         if (desc != null && !desc.isEmpty()) return desc;
+         return "User Defined Problem";
     }
    return "SYMPTOM";
 }

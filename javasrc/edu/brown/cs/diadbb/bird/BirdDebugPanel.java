@@ -523,8 +523,14 @@ private final class SymptomAction extends AbstractAction {
       
       int sts = pnl.showDialog(BirdDebugPanel.this);
       if (sts != JOptionPane.OK_OPTION) return;
-      // check if symptom is valid  
-      // define new symptom and pass to diad
+      
+      BirdFactory bird = BirdFactory.getFactory();
+      IvyXmlWriter xw = new IvyXmlWriter();
+      pnl.getSymptomXml(xw);
+      String symp = xw.closeResult();
+      CommandArgs args = new CommandArgs("DEBUGID",
+            for_instance.getId());
+      bird.sendDiadMessage("SYMPTOM",args,symp);
     }
    
 }       // end of inner class StartFrameAction
