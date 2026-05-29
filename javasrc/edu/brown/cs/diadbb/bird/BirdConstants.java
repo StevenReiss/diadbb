@@ -66,7 +66,7 @@ enum DiadSymptomType {
 enum DiadValueOperator {
    NONE,
    EQL, NEQ, GTR, GEQ, LSS, LEQ,
-   IN, NOTIN,
+   CONTAINS, NOTCONTAINS,
 }
 
 

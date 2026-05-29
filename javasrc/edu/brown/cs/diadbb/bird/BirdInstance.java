@@ -54,8 +54,8 @@ static {
    OP_NAMES.put(DiadValueOperator.LEQ,"<=");
    OP_NAMES.put(DiadValueOperator.LSS,"<");
    OP_NAMES.put(DiadValueOperator.NEQ,"!=");
-   OP_NAMES.put(DiadValueOperator.IN,"CONTAINS");
-   OP_NAMES.put(DiadValueOperator.EQL,"NOT CONTAINS");
+   OP_NAMES.put(DiadValueOperator.CONTAINS,"CONTAINS");
+   OP_NAMES.put(DiadValueOperator.NOTCONTAINS,"NOT CONTAINS"); 
 }
 
 
