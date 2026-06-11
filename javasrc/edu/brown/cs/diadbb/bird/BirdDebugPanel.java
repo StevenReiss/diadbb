@@ -296,6 +296,18 @@ void addPopupButtons(JPopupMenu menu)
       menu.add(new SaveAction());
       menu.add(new PrintAction());
     }
+   switch (state) {
+      case READY :
+      case NO_ANALYSIS :
+      case NO_LOCATIONS_FOUND :
+      case NO_BASE_EXECUTION :
+      case NO_FINAL_LOCATIONS :
+         menu.add(new TestCaseAction());
+         break;
+      default :
+         break;
+         
+    }
 }
 
 
@@ -1141,7 +1153,7 @@ private final class Responder implements ResponseHandler, Runnable {
       appendOutput(disp);    
     }
 
-}       // end of inner class ResponseAction
+}       // end of inner class Responder
 
 
 private final class AskLimbaCommand extends Thread {
@@ -1176,6 +1188,30 @@ private final class AskLimbaCommand extends Thread {
      }
     
 }       // end of inner class AskLimbaCommand
+
+
+
+private final class TestCaseAction extends AbstractAction implements ResponseHandler {
+   
+   private static final long serialVersionUID = 1;
+   
+   TestCaseAction() {
+      super("Generate Test Duplicating Symptom");
+    }
+   
+   @Override public void actionPerformed(ActionEvent evt) {
+      CommandArgs args = new CommandArgs("DEBUGID",for_instance.getId());
+      BirdFactory.getFactory().issueXmlCommand("CREATETEST",args,null,this);
+    }
+   
+   @Override public void handleResponse(Element xml) {
+      // if test created -- ask where to insert it (new file, existing test class)
+      // otherwise tell user test generation failed
+    }
+   
+}       // end of inner class TestCaseAction
+
+
 
 
 
