@@ -67,6 +67,7 @@ import edu.brown.cs.bubbles.board.BoardLog;
 import edu.brown.cs.bubbles.board.BoardProperties;
 import edu.brown.cs.bubbles.buda.BudaBubbleArea;
 import edu.brown.cs.bubbles.buda.BudaConstants;
+import edu.brown.cs.bubbles.buda.BudaErrorBubble;
 import edu.brown.cs.bubbles.buda.BudaRoot;
 import edu.brown.cs.bubbles.buda.BudaConstants.BudaLinkStyle;
 import edu.brown.cs.bubbles.bump.BumpClient;
@@ -1205,8 +1206,19 @@ private final class TestCaseAction extends AbstractAction implements ResponseHan
     }
    
    @Override public void handleResponse(Element xml) {
-      // if test created -- ask where to insert it (new file, existing test class)
-      // otherwise tell user test generation failed
+      Element test = IvyXml.getChild(xml,"TESTCASE");
+      BudaBubbleArea bba = BudaRoot.findBudaBubbleArea(BirdDebugPanel.this);
+      if (bba == null) return;
+      if (test == null) {
+         BudaErrorBubble err = new BudaErrorBubble("Test Case Generation Failed");
+         bba.addBubble(err, BirdDebugPanel.this, null,
+               BudaConstants.PLACEMENT_LEFT);
+       }
+      else {
+         BirdTestCaseBubble bbl = new BirdTestCaseBubble(for_instance,test);
+         bba.addBubble(bbl, BirdDebugPanel.this, null,
+               BudaConstants.PLACEMENT_LEFT);
+       }
     }
    
 }       // end of inner class TestCaseAction
