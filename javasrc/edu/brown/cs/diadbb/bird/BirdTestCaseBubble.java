@@ -24,19 +24,26 @@ package edu.brown.cs.diadbb.bird;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseEvent;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
+import javax.swing.JPopupMenu;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
 
 import org.w3c.dom.Element;
 
 import edu.brown.cs.bubbles.bale.BaleFactory;
+import edu.brown.cs.bubbles.bass.BassFactory;
 import edu.brown.cs.bubbles.batt.BattFactory;
+import edu.brown.cs.bubbles.board.BoardColors;
 import edu.brown.cs.bubbles.board.BoardLog;
 import edu.brown.cs.bubbles.buda.BudaBubble;
 import edu.brown.cs.bubbles.buda.BudaBubbleArea;
@@ -70,6 +77,9 @@ private String          start_frame;
 private BirdInstance    for_instance;
 private String          test_body;
 private String          test_assertion;
+private String          test_project;
+private boolean         user_frame;
+private TestPanel       test_panel;
       
 
 private static final long serialVersionUID = 1;
@@ -85,18 +95,123 @@ private static final long serialVersionUID = 1;
 BirdTestCaseBubble(BirdInstance inst,Element xml)
 {
    for_instance = inst;
-   test_name = IvyXml.getAttrString(xml,"NAME");
-   test_item = IvyXml.getAttrString(xml,"TESTCLASS") + "." +
-         IvyXml.getAttrString(xml,"TESTMETHOD");
-   start_frame = IvyXml.getAttrString(xml,start_frame);
-   test_body = IvyXml.getTextElement(xml,"BODY");
-   test_assertion = IvyXml.getTextElement(xml,"ASSERTION");
+   user_frame = false;
+   test_panel = null;
+   test_project = null;
    
-   TestPanel pnl = new TestPanel();
-   setContentPane(pnl);
+   BoardColors.setColors(this,BoardColors.getColor("Bird.panel.background"));
+   
+   setMessage("Working on test case generation");
 }
 
 
+
+/********************************************************************************/
+/*                                                                              */
+/*      Update methods                                                          */
+/*                                                                              */
+/********************************************************************************/
+
+void setMessage(String msg)
+{
+   test_name = null;
+   test_item = null;
+   start_frame = null;
+   test_body = null;
+   test_assertion = null;
+   test_panel = null;
+   test_project = null;
+   
+   JLabel lbl = new JLabel(msg);
+   lbl.setOpaque(true);
+   BoardColors.setColors(lbl,BoardColors.getColor("Bird.panel.background"));
+   setContentPane(lbl);
+}
+
+
+void update(Element xml) 
+{ 
+   test_name = IvyXml.getAttrString(xml,"NAME");
+   test_item = IvyXml.getAttrString(xml,"TESTCLASS") + "." +
+         IvyXml.getAttrString(xml,"TESTMETHOD");
+   start_frame = IvyXml.getAttrString(xml,"STARTFRAME");
+   test_body = IvyXml.getTextElement(xml,"BODY");
+   test_assertion = IvyXml.getTextElement(xml,"ASSERTION");
+   user_frame = false;
+   
+   String fnm = IvyXml.getAttrString(xml,"STARTFILE");
+   File ff = new File(fnm);
+   test_project = BassFactory.getFactory().findProjectForFile(ff);
+   
+   test_panel = new TestPanel();
+   setContentPane(test_panel);
+}
+
+
+
+/********************************************************************************/
+/*                                                                              */
+/*      Retry option                                                            */
+/*                                                                              */
+/********************************************************************************/
+
+private void retry()
+{
+   if (test_panel != null) {
+      if (user_frame) {
+         start_frame = test_panel.getStartFrame();
+       }
+      test_name = test_panel.getTestName();
+    }
+   CommandArgs args = new CommandArgs("DEBUGID",for_instance.getId(),
+         "NAME",test_name);
+   if (user_frame) args.put("STARTFRAME",start_frame);
+   BirdFactory.getFactory().issueXmlCommand("CREATETEST",args,null,
+         new RetryResponse());
+   
+   setMessage("Retrying test generation");     
+}
+
+
+private class RetryResponse implements ResponseHandler, Runnable {
+   
+   private Element test_response;
+   
+   RetryResponse() {
+      test_response = null;
+    }
+   
+   @Override public void handleResponse(Element xml) {
+      test_response = xml;
+      SwingUtilities.invokeLater(this);
+    }
+   
+   @Override public void run() {
+      Element test = IvyXml.getChild(test_response,"TESTCASE");
+      if (test == null) {
+         setMessage("Test Case GenerationFailed");
+       }
+      else {
+         update(test);
+       }
+    }
+   
+}       // end of inner class RetryResponse
+
+
+/********************************************************************************/
+/*                                                                              */
+/*      Popup menu handling                                                     */
+/*                                                                              */
+/********************************************************************************/
+
+@Override public void handlePopupMenu(MouseEvent e) 
+{
+   JPopupMenu menu = new JPopupMenu();
+   
+   menu.add(getFloatBubbleAction());
+   menu.show(this,e.getX(),e.getY());
+}
 
 /********************************************************************************/
 /*                                                                              */
@@ -107,7 +222,7 @@ BirdTestCaseBubble(BirdInstance inst,Element xml)
 private void insertTest(String incls,String code)
 {
    BumpLocation target = null;
-   String proj = null;
+   String proj = test_project;
    String loc = null;
    
    BumpClient bc = BumpClient.getBump();
@@ -144,7 +259,7 @@ private void insertTest(String incls,String code)
     }
    
    if (telluser) {
-      JOptionPane.showMessageDialog(null,
+      JOptionPane.showMessageDialog(this,
             "Test case inserted into " + loc,
             "Bird Test Generation Response",
             JOptionPane.INFORMATION_MESSAGE);
@@ -185,8 +300,9 @@ private class TestPanel extends SwingGridPanel implements ActionListener {
    private static final long serialVersionUID = 1L;
    
    TestPanel() {
+      BoardColors.setColors(this,BoardColors.getColor("Bird.panel.background"));
       beginLayout();
-      addBannerLabel("Create Test Case");
+      addBannerLabel("Create Test Case for Symptom");
       name_field = addTextField("Name",test_name,this,null);
       code_name = test_name;
       totest_field = addTextField("Test",test_item,null,null);
@@ -204,7 +320,7 @@ private class TestPanel extends SwingGridPanel implements ActionListener {
             if (fe.getId().equals(start_frame)) sel = fe;
           }
        }
-      frame_field = addChoice("Start Frame",choices,sel,false,null);
+      frame_field = addChoice("Start Frame",choices,sel,false,this);
       
       addSeparator();
       
@@ -228,7 +344,7 @@ private class TestPanel extends SwingGridPanel implements ActionListener {
       int idx = test_item.lastIndexOf(".");
       String tcl = test_item.substring(0,idx);
       String tmthd = test_item.substring(idx+1);
-      String tcnm = BattFactory.getFactory().findTestClasses(null,
+      String tcnm = BattFactory.getFactory().findTestClasses(test_project,
             tcl,tmthd,classes);
       default_class = tcnm;
       if (default_class != null && !classes.contains(default_class)) {
@@ -270,16 +386,22 @@ private class TestPanel extends SwingGridPanel implements ActionListener {
    @Override public void actionPerformed(ActionEvent evt) {
       String what = evt.getActionCommand().toUpperCase();
       switch (what) {
+         case "START FRAME" :
+            String sf = getStartFrame();
+            if (sf != null && !sf.equals(start_frame)) user_frame = true;
+            break;
          case "NAME" :
-            updateCode();
+            String nm = getTestName();
+            if (nm != null && !nm.equals(test_name)) {
+               updateCode();
+             }
             break;
          case "CANCEL" :
             BudaBubble bbl = BudaRoot.findBudaBubble(this);
             bbl.setVisible(false);
             break;
          case "RETRY" : 
-            // this should resend the query, and then just update the test panel
-            //   when a response is received
+            retry();
             break;
          case "INSERT" :
             BoardLog.logD("BIRD","Insert test case into " + getInsertClass() + 

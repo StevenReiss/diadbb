@@ -67,7 +67,6 @@ import edu.brown.cs.bubbles.board.BoardLog;
 import edu.brown.cs.bubbles.board.BoardProperties;
 import edu.brown.cs.bubbles.buda.BudaBubbleArea;
 import edu.brown.cs.bubbles.buda.BudaConstants;
-import edu.brown.cs.bubbles.buda.BudaErrorBubble;
 import edu.brown.cs.bubbles.buda.BudaRoot;
 import edu.brown.cs.bubbles.buda.BudaConstants.BudaLinkStyle;
 import edu.brown.cs.bubbles.bump.BumpClient;
@@ -877,7 +876,7 @@ private final class RepairsAction extends AbstractAction implements ResponseHand
        }
       
       if (edits.isEmpty()) {
-         Responder resp = new Responder();
+         Responder resp = new Responder();  
          resp.handleResponse(xml);
        }
       else {
@@ -1192,35 +1191,49 @@ private final class AskLimbaCommand extends Thread {
 
 
 
-private final class TestCaseAction extends AbstractAction implements ResponseHandler {
+private final class TestCaseAction extends AbstractAction implements ResponseHandler, Runnable {
+   
+   private BirdTestCaseBubble test_bubble;
+   private Element test_response;
    
    private static final long serialVersionUID = 1;
    
    TestCaseAction() {
-      super("Generate Test Duplicating Symptom");
+      super("Generate Test Case Duplicating Symptom");
+      test_bubble = null;
+      test_response = null;
     }
    
    @Override public void actionPerformed(ActionEvent evt) {
+      test_response = null;
       CommandArgs args = new CommandArgs("DEBUGID",for_instance.getId());
       BirdFactory.getFactory().issueXmlCommand("CREATETEST",args,null,this);
+      SwingUtilities.invokeLater(this);
     }
    
    @Override public void handleResponse(Element xml) {
-      Element test = IvyXml.getChild(xml,"TESTCASE");
-      BudaBubbleArea bba = BudaRoot.findBudaBubbleArea(BirdDebugPanel.this);
-      if (bba == null) return;
-      if (test == null) {
-         BudaErrorBubble err = new BudaErrorBubble("Test Case Generation Failed");
-         bba.addBubble(err, BirdDebugPanel.this, null,
-               BudaConstants.PLACEMENT_LEFT);
-       }
-      else {
-         BirdTestCaseBubble bbl = new BirdTestCaseBubble(for_instance,test);
-         bba.addBubble(bbl, BirdDebugPanel.this, null,
-               BudaConstants.PLACEMENT_LEFT);
-       }
+      test_response = xml;
+      SwingUtilities.invokeLater(this);
     }
    
+   @Override public void run() {
+      Element test = IvyXml.getChild(test_response,"TESTCASE");
+      if (test_response == null || test_bubble == null) {
+         BudaBubbleArea bba = BudaRoot.findBudaBubbleArea(BirdDebugPanel.this);
+         if (bba == null) return;
+         test_bubble = new BirdTestCaseBubble(for_instance,null);
+         bba.addBubble(test_bubble, BirdDebugPanel.this, null,
+               BudaConstants.PLACEMENT_RIGHT);
+       }
+      else if (test_bubble != null) {
+         if (test == null) {
+            test_bubble.setMessage("Test Case GenerationFailed");
+          }
+         else {
+            test_bubble.update(test);
+          }
+       }
+    }
 }       // end of inner class TestCaseAction
 
 
