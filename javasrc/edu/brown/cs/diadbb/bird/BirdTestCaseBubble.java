@@ -22,6 +22,8 @@
 
 package edu.brown.cs.diadbb.bird;
 
+import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
@@ -34,9 +36,12 @@ import java.util.TreeSet;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
-import javax.swing.JTextArea;
+import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
+import javax.swing.text.JTextComponent;
+
+import jsyntaxpane.DefaultSyntaxKit;
 
 import org.w3c.dom.Element;
 
@@ -58,6 +63,7 @@ import edu.brown.cs.bubbles.bump.BumpClient;
 import edu.brown.cs.bubbles.bump.BumpLocation;
 import edu.brown.cs.ivy.mint.MintConstants.CommandArgs;
 import edu.brown.cs.ivy.swing.SwingComboBox;
+import edu.brown.cs.ivy.swing.SwingEditorPane;
 import edu.brown.cs.ivy.swing.SwingGridPanel;
 import edu.brown.cs.ivy.xml.IvyXml;
 
@@ -81,6 +87,8 @@ private String          test_project;
 private boolean         user_frame;
 private TestPanel       test_panel;
       
+private static final int SPACES_PER_INDENT = 3;
+
 
 private static final long serialVersionUID = 1;
 
@@ -100,6 +108,8 @@ BirdTestCaseBubble(BirdInstance inst,Element xml)
    test_project = null;
    
    BoardColors.setColors(this,BoardColors.getColor("Bird.panel.background"));
+   
+   DefaultSyntaxKit.getConfig(DefaultSyntaxKit.class);  // initialize if not done so
    
    setMessage("Working on test case generation");
 }
@@ -126,6 +136,7 @@ void setMessage(String msg)
    lbl.setOpaque(true);
    BoardColors.setColors(lbl,BoardColors.getColor("Bird.panel.background"));
    setContentPane(lbl);
+   setVisible(true);
 }
 
 
@@ -145,6 +156,7 @@ void update(Element xml)
    
    test_panel = new TestPanel();
    setContentPane(test_panel);
+   setVisible(true);
 }
 
 
@@ -281,6 +293,54 @@ private BuenoProperties loadFileProperties(String incls)
    return bp;
 }
 
+
+/********************************************************************************/
+/*                                                                              */
+/*      Format the code                                                         */
+/*                                                                              */
+/********************************************************************************/
+
+private static String formatMethod(String code)
+{
+   if (code == null || code.trim().isEmpty()) {
+      return code;
+    }
+   
+   // Split by lines and trim excess whitespace
+   String[] lines = code.split("\\r?\\n");
+   StringBuffer formatted = new StringBuffer();
+   int indentlevel = 0;
+   
+   for (String rawline : lines) {
+      String line = rawline.trim();
+      if (line.isEmpty()) continue;
+      
+      // Reduce indent if line starts with a closing brace
+      if (line.startsWith("}")) {
+         indentlevel = Math.max(0, indentlevel - 1);
+       }
+      
+      // Build current indent string
+      StringBuffer indent = new StringBuffer();
+      for (int i = 0; i < (indentlevel * SPACES_PER_INDENT); i++) {
+         indent.append(" ");
+       }
+      
+      // Append the indented line
+      formatted.append(indent).append(line).append("\n");
+      
+      // Increase indent for the next lines if an opening brace is present
+      // (Ignoring braces that open and close on the same line)
+      if (line.contains("{") && !line.contains("}")) {
+         indentlevel++;
+       }
+    }
+   
+   return formatted.toString();
+}
+
+
+
 /********************************************************************************/
 /*                                                                              */
 /*      Bubble contents                                                         */
@@ -292,7 +352,7 @@ private class TestPanel extends SwingGridPanel implements ActionListener {
    private JTextField name_field;
    private JTextField totest_field;
    private SwingComboBox<FrameElement> frame_field;
-   private JTextArea code_area;
+   private JTextComponent code_area;
    private SwingComboBox<String> insert_field;
    private String default_class;
    private String code_name;
@@ -335,8 +395,20 @@ private class TestPanel extends SwingGridPanel implements ActionListener {
          testcode.append("\n");
        }
       testcode.append("}");
-      code_area = addTextArea("Test Code",testcode.toString(),
-            30,80,null);
+      String code = formatMethod(testcode.toString());
+      
+      SwingEditorPane coded = new SwingEditorPane("text/java",code);
+      Font ft = coded.getFont();
+      ft = ft.deriveFont(Font.BOLD);
+      ft = ft.deriveFont(13.0f);
+      coded.setFont(ft);
+      Dimension d = coded.getPreferredSize();
+      d.height = Math.min(d.height + 10,400);
+      d.width = Math.min(d.width + 25,500);
+      JScrollPane sp = new JScrollPane(coded);
+      addRawComponent("Test Code",sp);
+      code_area = coded;
+//    code_area = addTextArea("Test Code",code,30,80,null);
       
       addSeparator();
       
