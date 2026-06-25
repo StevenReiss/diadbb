@@ -142,11 +142,16 @@ void setMessage(String msg)
 
 void update(Element xml) 
 { 
+   test_body = IvyXml.getTextElement(xml,"BODY");
+   if (test_body == null) {
+      setMessage("Test Case Generation Failed");
+      return;
+    }
+         
    test_name = IvyXml.getAttrString(xml,"NAME");
    test_item = IvyXml.getAttrString(xml,"TESTCLASS") + "." +
          IvyXml.getAttrString(xml,"TESTMETHOD");
    start_frame = IvyXml.getAttrString(xml,"STARTFRAME");
-   test_body = IvyXml.getTextElement(xml,"BODY");
    test_assertion = IvyXml.getTextElement(xml,"ASSERTION");
    user_frame = false;
    

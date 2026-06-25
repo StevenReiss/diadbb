@@ -451,26 +451,27 @@ private final class StartFrameAction extends AbstractAction {
     }
    
    @Override public void actionPerformed(ActionEvent evt) {
-     CommandArgs args = new CommandArgs("DEBUGID",for_instance.getId());
-     Element xml = BirdFactory.getFactory().sendDiadMessage("STARTFRAME",
-           args,null);
-     List<FrameElement> choices = new ArrayList<>();
-     FrameElement sel = null;
-     String sid = for_instance.getStartFrameId(); 
-     for (Element frm : IvyXml.children(IvyXml.getChild(xml,"FRAMES"))) {
-       FrameElement fe = new FrameElement(frm);
-       if (fe.isValid()) {
-          choices.add(fe);
-          if (fe.getId().equals(sid)) sel = fe;
-        }
-      }
-     if (choices.isEmpty()) return;
-     
-     FrameElement [] elts = choices.toArray(new FrameElement[choices.size()]);
-     Object rslt = JOptionPane.showInputDialog(BirdDebugPanel.this,
-           null,"Choose Starting Frame",
-           JOptionPane.QUESTION_MESSAGE,null,
-           elts,sel);
+      CommandArgs args = new CommandArgs("DEBUGID",for_instance.getId());
+      Element xml = BirdFactory.getFactory().sendDiadMessage("STARTFRAME",
+            args,null);
+      List<FrameElement> choices = new ArrayList<>();
+      FrameElement sel = null;
+      String sid = for_instance.getStartFrameId(); 
+      for (Element frm : IvyXml.children(IvyXml.getChild(xml,"FRAMES"))) {
+         FrameElement fe = new FrameElement(frm);
+         if (fe.isValid()) {
+            choices.add(fe);
+            if (fe.getId().equals(sid)) sel = fe;
+          }
+       }
+      if (choices.isEmpty()) return;
+      
+      FrameElement [] elts = choices.toArray(new FrameElement[choices.size()]);
+      Object rslt = JOptionPane.showInputDialog(BirdDebugPanel.this,
+            null,"Choose Starting Frame",
+            JOptionPane.QUESTION_MESSAGE,null,
+            elts,sel);
+      BoardLog.logD("BIRD","Start frame returned " + rslt);
       if (rslt == null) return;
       
       FrameElement fe = (FrameElement) rslt;

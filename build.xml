@@ -32,6 +32,7 @@
      <pathelement location='${DIADBB}/java' />
      <pathelement location='${DIADBB}/javasrc' />
      <pathelement location='${PRO}/bubbles/java' />
+     <fileset dir='${BUBBLESLIB}' includes='jsyntaxpane.jar' />
      <fileset dir='${DIADLIB}' includes='*.jar' />
      <fileset dir='${IVYLIB}' includes='ivy.jar' />
      <fileset dir='${PRO}/ivy/lib/eclipsejar' includes='*.jar' />
