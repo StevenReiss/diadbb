@@ -31,9 +31,14 @@ import edu.brown.cs.ivy.mint.MintControl;
 import edu.brown.cs.ivy.mint.MintDefaultReply;
 import edu.brown.cs.ivy.mint.MintHandler;
 import edu.brown.cs.ivy.mint.MintMessage;
+import edu.brown.cs.ivy.swing.SwingGridPanel;
+import edu.brown.cs.ivy.swing.SwingTextArea;
 import edu.brown.cs.ivy.xml.IvyXml;
 import edu.brown.cs.ivy.xml.IvyXmlWriter;
 
+import java.awt.Point;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -44,7 +49,9 @@ import java.util.StringTokenizer;
 import java.util.WeakHashMap;
 
 import javax.swing.AbstractAction;
+import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
+import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 
 import org.w3c.dom.Element;
@@ -62,6 +69,8 @@ import edu.brown.cs.bubbles.board.BoardSetup;
 import edu.brown.cs.bubbles.board.BoardConstants.BoardPluginFilter;
 import edu.brown.cs.bubbles.board.BoardLog;
 import edu.brown.cs.bubbles.buda.BudaBubble;
+import edu.brown.cs.bubbles.buda.BudaBubbleArea;
+import edu.brown.cs.bubbles.buda.BudaConstants;
 import edu.brown.cs.bubbles.buda.BudaRoot;
 import edu.brown.cs.bubbles.bump.BumpClient;
 
@@ -140,6 +149,9 @@ private void setupCallbacks()
    BoardProperties birdprops = BoardProperties.getProperties("Bird");
    boolean show = birdprops.getBoolean("Bird.show.panel");
    dfac.addAuxButton(new BirdBubbleAction(),show);
+   
+   BudaRoot.registerMenuButton("Bubble.Smart Asst.Debug Stack Trace",
+           new StackTraceDebugAction());
 }
 
 
@@ -810,7 +822,7 @@ private final class BirdContexter implements BaleConstants.BaleContextListener {
 
 public static class BirdBubbleAction extends AbstractAction implements BddtConstants.BddtAuxBubbleAction {  
   
-   private Object launch_id; 
+   private Object launch_id;    // BddtLaunchControl (non-public class)
    
    private static final long serialVersionUID = 1;
    
@@ -837,6 +849,62 @@ public static class BirdBubbleAction extends AbstractAction implements BddtConst
     }
    
 }       // end of inner class BirdBubbleAction
+
+
+
+/********************************************************************************/
+/*                                                                              */
+/*      Button for debugging a stack trace                                      */
+/*                                                                              */
+/********************************************************************************/
+
+private final class StackTraceDebugAction implements BudaConstants.ButtonListener {
+    
+    @Override public void buttonActivated(BudaBubbleArea bba,String id,Point pt) {
+        JTextArea textarea = new SwingTextArea(null,30,80);
+        BoardLog.logD("BIRD","Show stack trace dialog");
+        String [] opts = new String[] { "CANCEL", "DEBUG" };
+        int sts = JOptionPane.showOptionDialog(bba,textarea,
+                "Paste a Stack Trace to Debug",
+                JOptionPane.DEFAULT_OPTION,
+                JOptionPane.PLAIN_MESSAGE,
+                null,opts,"CANCEL");
+        if (sts == JOptionPane.CLOSED_OPTION || !opts[sts].equals("DEBUG")) return;
+        String st = textarea.getText().trim();
+        if (st == null || st.isBlank()) return;
+        IvyXmlWriter xw = new IvyXmlWriter();
+        xw.cdataElement("STACK",st);
+        Element rslt = sendDiadMessage("STACKDEBUG",null,xw.toString());
+        if (IvyXml.isElement(rslt,"RESULT")) {
+            
+         } 
+        // send trace to diad to debug.  If bad result, pop up error bubble
+        // otherwise create a bird instance from return id and create
+        // a debug bubble for the instance
+     }
+    
+    
+}   // end of inner class StackTraceDebugAction
+
+
+private class StackTraceDialog extends SwingGridPanel {
+    
+    private JTextArea text_area;
+    
+    private static final long serialVersionUID = 1;
+    
+    StackTraceDialog(ActionListener al) {
+        beginLayout();
+        addBannerLabel("Provide Stack Trace to Debug");
+        text_area = addTextArea("Stack Trace",null, 80,30,null);
+     }
+    
+    String getStackTrace() {
+        return text_area.getText().trim();
+     }
+    
+}
+
 
 
 }      // end of class BirdFactory

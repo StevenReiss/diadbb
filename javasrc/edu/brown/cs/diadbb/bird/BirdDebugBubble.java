@@ -86,6 +86,18 @@ BirdDebugBubble(BirdFactory fac,Object lid)
    setContentPane(debug_tabs);
 }
 
+BirdDebugBubble(BirdFactory fac)
+{
+    BoardProperties birdprops = BoardProperties.getProperties("Bird");
+    int w = birdprops.getInt("Bird.panel.width",400);
+    int h = birdprops.getInt("Bird.panel.height",300);
+    preferred_size = new Dimension(w,h);
+    debug_tabs = null;
+    active_panels = new HashMap<>();
+    
+    setContentPane(debug_tabs);
+}
+
 @Override public void localDispose() 
 { }
 
@@ -295,6 +307,8 @@ private class ParameterDialog extends SwingGridPanel {
        }
     }
 }
+
+
 
 }       // end of class BirdDebugBubble
 
