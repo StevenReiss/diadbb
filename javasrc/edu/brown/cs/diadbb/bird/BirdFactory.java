@@ -31,14 +31,10 @@ import edu.brown.cs.ivy.mint.MintControl;
 import edu.brown.cs.ivy.mint.MintDefaultReply;
 import edu.brown.cs.ivy.mint.MintHandler;
 import edu.brown.cs.ivy.mint.MintMessage;
-import edu.brown.cs.ivy.swing.SwingGridPanel;
-import edu.brown.cs.ivy.swing.SwingTextArea;
 import edu.brown.cs.ivy.xml.IvyXml;
 import edu.brown.cs.ivy.xml.IvyXmlWriter;
 
 import java.awt.Point;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -49,9 +45,7 @@ import java.util.StringTokenizer;
 import java.util.WeakHashMap;
 
 import javax.swing.AbstractAction;
-import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
-import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 
 import org.w3c.dom.Element;
@@ -91,7 +85,7 @@ private boolean limba_running;
 private boolean limba_started;
 private Map<String,BirdInstance> instance_map;
 private Map<String,ResponseHandler> hdlr_map;
-private Map<BirdDebugBubble,Boolean> debug_bubbles;
+private Map<BirdDebugSet,Boolean> debug_bubbles;
 
 private static BirdFactory the_factory = new BirdFactory();
 
@@ -210,7 +204,7 @@ private void handleUpdate(Element xml)
     }
    String id = IvyXml.getAttrString(xml,"ID");
    
-   BirdDebugBubble bbl = findBubble(xml);
+   BirdDebugSet bbl = findBubble(xml);
    if (bbl == null) {
       BoardLog.logD("BIRD","Can't find debug bubble for candidate " + id);
     }
@@ -252,18 +246,21 @@ void removeInstance(BirdInstance binst)
 }
 
 
-private BirdDebugBubble findBubble(Element xml)
+private BirdDebugSet findBubble(Element xml)
 {
    String bid = IvyXml.getAttrString(xml,"ID");
    Element thrd = IvyXml.getChild(xml,"THREAD");
    String tid = IvyXml.getAttrString(thrd,"ID");
    
-   for (BirdDebugBubble bbl : debug_bubbles.keySet()) {
-      if (bbl.isIdRelevant(bid)) { 
-         return bbl;
+   for (BirdDebugSet dset : debug_bubbles.keySet()) {
+      if (dset.isIdRelevant(bid)) { 
+         return dset;
        }
-      if (BddtFactory.getFactory().isThreadRelevant(bbl,tid)) { 
-         return bbl; 
+      if (dset instanceof BudaBubble) {
+         BudaBubble bbbl = (BudaBubble) dset;
+         if (BddtFactory.getFactory().isThreadRelevant(bbbl,tid)) { 
+            return dset; 
+          }
        }
     }
    return null;
@@ -859,51 +856,14 @@ public static class BirdBubbleAction extends AbstractAction implements BddtConst
 /********************************************************************************/
 
 private final class StackTraceDebugAction implements BudaConstants.ButtonListener {
-    
-    @Override public void buttonActivated(BudaBubbleArea bba,String id,Point pt) {
-        JTextArea textarea = new SwingTextArea(null,30,80);
-        BoardLog.logD("BIRD","Show stack trace dialog");
-        String [] opts = new String[] { "CANCEL", "DEBUG" };
-        int sts = JOptionPane.showOptionDialog(bba,textarea,
-                "Paste a Stack Trace to Debug",
-                JOptionPane.DEFAULT_OPTION,
-                JOptionPane.PLAIN_MESSAGE,
-                null,opts,"CANCEL");
-        if (sts == JOptionPane.CLOSED_OPTION || !opts[sts].equals("DEBUG")) return;
-        String st = textarea.getText().trim();
-        if (st == null || st.isBlank()) return;
-        IvyXmlWriter xw = new IvyXmlWriter();
-        xw.cdataElement("STACK",st);
-        Element rslt = sendDiadMessage("STACKDEBUG",null,xw.toString());
-        if (IvyXml.isElement(rslt,"RESULT")) {
-            
-         } 
-        // send trace to diad to debug.  If bad result, pop up error bubble
-        // otherwise create a bird instance from return id and create
-        // a debug bubble for the instance
-     }
-    
+   
+   @Override public void buttonActivated(BudaBubbleArea bba,String id,Point pt) {
+      BirdStackTraceBubble bbl = new BirdStackTraceBubble();
+      bba.addBubble(bbl,null,pt,BudaConstants.PLACEMENT_RIGHT);
+      debug_bubbles.put(bbl,Boolean.TRUE);
+    } 
     
 }   // end of inner class StackTraceDebugAction
-
-
-private class StackTraceDialog extends SwingGridPanel {
-    
-    private JTextArea text_area;
-    
-    private static final long serialVersionUID = 1;
-    
-    StackTraceDialog(ActionListener al) {
-        beginLayout();
-        addBannerLabel("Provide Stack Trace to Debug");
-        text_area = addTextArea("Stack Trace",null, 80,30,null);
-     }
-    
-    String getStackTrace() {
-        return text_area.getText().trim();
-     }
-    
-}
 
 
 

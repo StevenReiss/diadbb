@@ -1,8 +1,8 @@
 /********************************************************************************/
 /*                                                                              */
-/*              BirdDebugBubble.java                                            */
+/*              BirdStackTraceBubble.java                                       */
 /*                                                                              */
-/*      Main debug panel with tabs for active sessions                          */
+/*      Bubble for stack trace debugging                                        */
 /*                                                                              */
 /********************************************************************************/
 /*      Copyright 2011 Brown University -- Steven P. Reiss                    */
@@ -28,30 +28,32 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
-import java.awt.event.MouseEvent;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
+import java.awt.event.ActionListener;
 
-import javax.swing.AbstractAction;
-import javax.swing.JOptionPane;
-import javax.swing.JPopupMenu;
+import javax.swing.JButton;
 import javax.swing.JTabbedPane;
+import javax.swing.JTextArea;
+import javax.swing.event.UndoableEditEvent;
+import javax.swing.event.UndoableEditListener;
 
 import org.w3c.dom.Element;
 
-import edu.brown.cs.bubbles.bddt.BddtConstants;
 import edu.brown.cs.bubbles.board.BoardColors;
 import edu.brown.cs.bubbles.board.BoardLog;
 import edu.brown.cs.bubbles.board.BoardProperties;
 import edu.brown.cs.bubbles.buda.BudaBubble;
+import edu.brown.cs.bubbles.buda.BudaBubbleArea;
+import edu.brown.cs.bubbles.buda.BudaConstants;
+import edu.brown.cs.bubbles.buda.BudaErrorBubble;
+import edu.brown.cs.bubbles.buda.BudaRoot;
+import edu.brown.cs.ivy.mint.MintConstants.CommandArgs;
 import edu.brown.cs.ivy.swing.SwingGridPanel;
 import edu.brown.cs.ivy.swing.SwingText;
 import edu.brown.cs.ivy.xml.IvyXml;
+import edu.brown.cs.ivy.xml.IvyXmlWriter;
 
-class BirdDebugBubble extends BudaBubble implements BddtConstants.BddtAuxBubble, 
-     BirdConstants, BirdConstants.BirdDebugSet 
+class BirdStackTraceBubble extends BudaBubble implements BirdConstants,
+      BirdConstants.BirdDebugSet
 {
 
 
@@ -61,13 +63,13 @@ class BirdDebugBubble extends BudaBubble implements BddtConstants.BddtAuxBubble,
 /*                                                                              */
 /********************************************************************************/
 
-private DebugTabs       debug_tabs;
-private Map<String,BirdDebugPanel> active_panels;
-private Dimension       preferred_size;
-
+private DebugTabs   debug_tabs;
+private StackTracePanel stack_panel;
+private BirdDebugPanel debug_panel;
+private Dimension   preferred_size;
+private String debug_id;
 
 private static final long serialVersionUID = 1;
-
 
 
 /********************************************************************************/
@@ -76,127 +78,108 @@ private static final long serialVersionUID = 1;
 /*                                                                              */
 /********************************************************************************/
 
-BirdDebugBubble(BirdFactory fac,Object lid)
+BirdStackTraceBubble()
 {
    BoardProperties birdprops = BoardProperties.getProperties("Bird");
    int w = birdprops.getInt("Bird.panel.width",400);
    int h = birdprops.getInt("Bird.panel.height",300);
    preferred_size = new Dimension(w,h);
    debug_tabs = new DebugTabs();
-   active_panels = new HashMap<>();
+   
+   debug_panel = null;
+   debug_id = null;
+   stack_panel = new StackTracePanel();
+   debug_tabs.addTab("Stack Trace",stack_panel);
+   
    setContentPane(debug_tabs);
 }
 
 
 
-@Override public void localDispose() 
-{ }
-
-
-
 /********************************************************************************/
 /*                                                                              */
-/*      Handle Debug Instances                                                  */
+/*      Debug set methods                                                       */
 /*                                                                              */
 /********************************************************************************/
 
-@Override public void addDebugInstance(BirdInstance bi) 
+@Override public void addDebugInstance(BirdInstance bi)
 {
-   BirdDebugPanel pnl = new BirdDebugPanel(bi);
-   active_panels.put(bi.getId(),pnl);
-    
-   debug_tabs.addTab(bi.getTitle(),pnl);
-   
+   debug_panel = new BirdDebugPanel(bi);
+   debug_tabs.addTab(bi.getTitle(),debug_panel);
    updateDebugInstance(bi);
-   
    debug_tabs.repaint();
 }
 
 
 @Override public void updateDebugInstance(BirdInstance bi)
 { 
-   BirdDebugPanel pnl = active_panels.get(bi.getId());
-   if (pnl == null) return;
-   
-   pnl.updateInstance(); 
-   int idx = findPanelIndex(pnl);
-   if (idx >= 0) {
-      Color c = bi.getTabColor(); 
-      if (c !=  null) {
-         debug_tabs.setBackgroundAt(idx,c);
+   if (bi == debug_panel.getInstance()) {
+      debug_panel.updateInstance();
+      int idx = findPanelIndex();
+      if (idx >= 0) {
+         Color c = bi.getTabColor(); 
+         if (c !=  null) {
+            debug_tabs.setBackgroundAt(idx,c);
+          }
        }
     }
 }
 
 
-@Override public void removeDebugInstance(BirdInstance bi)
-{ 
-   BirdDebugPanel pn = active_panels.remove(bi.getId());
-   if (pn == null) return;
-   
-   int i = findPanelIndex(pn);
-   if (i >= 0) {
-      BoardLog.logD("BIRD","Removing tab " + i);
-      debug_tabs.removeTabAt(i);
-      pn.dispose(); 
-    }
-   
-   debug_tabs.repaint();
-}
-
-
-
-private int findPanelIndex(BirdDebugPanel pnl)
+private int findPanelIndex()
 {
-   for (int i = 0; i < debug_tabs.getTabCount(); ++i) {
+   for (int i = 1; i < debug_tabs.getTabCount(); ++i) {
       BirdDebugPanel c = (BirdDebugPanel) debug_tabs.getComponentAt(i);
-      if (c == pnl) {
+      if (c == debug_panel) {
          return i;
        }
     }
    
    BoardLog.logD("BIRD","Can't find debug panel for " +
-         pnl.getInstance().getId());
+         debug_panel.getInstance().getId());
    
    return -1;
 }
 
 
-/********************************************************************************/
-/*                                                                              */
-/*      Access methods                                                           */
-/*                                                                              */
-/********************************************************************************/
+@Override public void removeDebugInstance(BirdInstance bi)
+{ 
+   if (bi == debug_panel.getInstance()) {
+      int idx = findPanelIndex();
+      if (idx >= 0) {
+         debug_tabs.removeTabAt(idx);
+         debug_panel.dispose();
+         debug_panel = null;
+         // reenable DEBUG button?
+       }
+    }
+}
 
-@Override public String getAuxType()            { return "DebuggerAssistant"; }
 
-@Override public boolean isIdRelevant(String id) 
+
+@Override public boolean isIdRelevant(String id)
 {
-   if (active_panels.get(id) != null) return true;
+   if (id != null && id.equals(debug_id)) return true;
    
    return false;
 }
 
 
+
 /********************************************************************************/
 /*                                                                              */
-/*      Menu methods                                                             */
+/*      Helper methods                                                          */
 /*                                                                              */
 /********************************************************************************/
 
-@Override public void handlePopupMenu(MouseEvent e)
+private void setDebugId(String id)
 {
-   JPopupMenu menu = new JPopupMenu();
-   if (!active_panels.isEmpty()) {
-      BirdDebugPanel pnl = (BirdDebugPanel) debug_tabs.getSelectedComponent();
-      if (pnl != null) pnl.addPopupButtons(menu);
-    }
-   
-   menu.add(new ParameterAction());
-    
-   menu.add(getFloatBubbleAction());
-   menu.show(this,e.getX(),e.getY());
+   debug_id = id;
+   BirdFactory fac = BirdFactory.getFactory();
+   CommandArgs args = new CommandArgs("DEBUGID",debug_id);
+   fac.sendDiadMessage("STARTSTACK",args,null);
 }
+
 
 
 /********************************************************************************/
@@ -236,75 +219,70 @@ private class DebugTabs extends JTabbedPane {
 
 /********************************************************************************/
 /*                                                                              */
-/*      Setting parameters                                                      */
+/*      Stack Trace Panel                                                       */
 /*                                                                              */
 /********************************************************************************/
 
-private final class ParameterAction extends AbstractAction {
-
+private class StackTracePanel extends SwingGridPanel implements UndoableEditListener,
+      ActionListener {
+   
+   private JTextArea text_area;
+   private JButton debug_button;
+   
    private static final long serialVersionUID = 1;
    
-   ParameterAction() {
-      super("Set Diad Parameters");
+   StackTracePanel() {
+      beginLayout();
+      addBannerLabel("Provide Stack Trace to Debug");
+      text_area = addTextArea("Stack Trace",null, 80,30,this);
+      addSeparator();
+      debug_button = addBottomButton("Debug","DEBUG",this);
+      debug_button.setEnabled(false);
+      addBottomButtons();
+    }
+   
+   @Override public void undoableEditHappened(UndoableEditEvent evt) {
+      boolean valid = false;
+      String txt = text_area.getText();
+      if (txt != null && !txt.isBlank() && txt.contains("\n")) {
+         valid = true;
+       }
+      debug_button.setEnabled(valid);
     }
    
    @Override public void actionPerformed(ActionEvent evt) {
-      ParameterDialog pd = new ParameterDialog();
-      pd.process();
-    }
-
-}       // end of inner class ParameterAction
-
-
-private class ParameterDialog extends SwingGridPanel {
-   
-   private static final long serialVersionUID = 1;
-   
-   ParameterDialog() {
-      Element parms = BirdFactory.getFactory().sendDiadMessage("PARAMETER",null,null);
-      DiadFileMode mode = IvyXml.getAttrEnum(parms,"FILEMODE",DiadFileMode.FAIT_FILES);
-      int maxstep = IvyXml.getAttrInt(parms,"SEEDE_STEPS",1000000);
-      int maxdepth = IvyXml.getAttrInt(parms,"SEEDE_DEPTH",100);
-      boolean autoquery = IvyXml.getAttrBool(parms,"AUTO_QUERY");
-      Element msxml= BirdFactory.getFactory().sendDiadMessage("SETMODEL",null,null);
-      Set<String> mdls = new TreeSet<>();
-      String curmdl = IvyXml.getAttrString(parms,"MODEL");
-      Element top = msxml;
-      if (!IvyXml.isElement(top,"MODELS")) top = IvyXml.getChild(msxml,"MODELS");
-      for (Element mxml : IvyXml.children(top,"MODEL")) {
-         String txt = IvyXml.getAttrString(mxml,"NAME");
-         mdls.add(txt);
-         if (IvyXml.getAttrBool(mxml,"ACTIVE")) {
-            curmdl = txt;
+      String st = text_area.getText().trim();
+      if (st == null || st.isBlank()) return;
+      IvyXmlWriter xw = new IvyXmlWriter();
+      xw.cdataElement("STACK",st);
+      String cnts = xw.toString();
+      xw.close();
+      BirdFactory bf = BirdFactory.getFactory();
+      Element rslt = bf.sendDiadMessage("STACKDEBUG",null,cnts);
+      if (IvyXml.isElement(rslt,"RESULT")) {
+         String id = IvyXml.getAttrString(rslt,"ID");
+         if (id == null) {
+            BudaBubbleArea bba = BudaRoot.findBudaBubbleArea(this);
+            BudaErrorBubble bub = new BudaErrorBubble("Bad stack trace");
+            if (bba != null) {
+               bba.addBubble(bub, BirdStackTraceBubble.this, null,
+                     BudaConstants.PLACEMENT_LEFT);
+             }
+            return;
           }
-       }
-      
-      beginLayout();
-      addBannerLabel("Parameters for Smart Debugger Assistant");
-      addChoice("File Mode",mode,null);
-      addNumericField("Max Steps",100000,100000000,maxstep,null);
-      addNumericField("Max Depth",10,1000,maxdepth,null);
-      addChoice("LLM Model",mdls,curmdl,null);
-      addBoolean("Auto Query",autoquery,null);
+         setDebugId(id);
+         debug_button.setEnabled(false);
+       } 
     }
    
-   void process() {
-      BoardLog.logD("BIRD","Show parameter dialog");
-      int sts = JOptionPane.showOptionDialog(BirdDebugBubble.this,this,
-            "Set Assistant Options",JOptionPane.OK_CANCEL_OPTION,
-            JOptionPane.PLAIN_MESSAGE,null,null,null);
-      if (sts == JOptionPane.OK_OPTION) {
-         // set parameters here
-       }
-    }
-}
+}   // end of inner class StackTracePanel
 
 
 
-}       // end of class BirdDebugBubble
+}       // end of class BirdStackTraceBubble
 
 
 
 
-/* end of BirdDebugBubble.java */
+/* end of BirdStackTraceBubble.java */
 

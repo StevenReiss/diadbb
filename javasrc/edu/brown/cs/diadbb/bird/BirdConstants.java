@@ -83,6 +83,19 @@ interface ResponseHandler {
 }
 
 
+/**
+ *      Set of debug instances for a bubble
+ **/ 
+
+interface BirdDebugSet {
+   
+   void addDebugInstance(BirdInstance inst);
+   void updateDebugInstance(BirdInstance inst);
+   void removeDebugInstance(BirdInstance inst);
+   boolean isIdRelevant(String id);
+   
+}
+
 }       // end of interface BirdConstants
 
 
