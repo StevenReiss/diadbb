@@ -24,8 +24,11 @@ package edu.brown.cs.diadbb.bird;
 
 import java.awt.Dimension;
 import java.awt.Graphics;
+import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileWriter;
@@ -75,6 +78,7 @@ import edu.brown.cs.ivy.file.IvyFormat;
 import edu.brown.cs.ivy.file.IvyLog;
 import edu.brown.cs.ivy.mint.MintConstants.CommandArgs;
 import edu.brown.cs.ivy.swing.SwingGridPanel;
+import edu.brown.cs.ivy.swing.SwingText;
 import edu.brown.cs.ivy.swing.SwingWrappingEditorPane;
 import edu.brown.cs.ivy.xml.IvyXml;
 import edu.brown.cs.ivy.xml.IvyXmlWriter;
@@ -104,6 +108,7 @@ private JButton         retry_btn;
 private boolean         doing_query;
 private Boolean         initial_response;
 private boolean         have_explanation;
+private boolean         auto_scroll;
 
 private static final Pattern HUNK_HEADER_PATTERN = 
    Pattern.compile("^@@ -(\\d+),?(\\d*) \\+(\\d+),?(\\d*) @@.*");
@@ -136,6 +141,9 @@ BirdDebugPanel(BirdInstance bi)
    doing_query = false;
    initial_response = null;
    have_explanation = false;
+   BoardProperties bp = BoardProperties.getProperties("Bird");
+   auto_scroll = bp.getBoolean("Bird.panel.auto.scroll",true);
+   
    setupPanel();
 }
 
@@ -161,6 +169,9 @@ BirdInstance getInstance()
 void updateInstance()
 {
    if (symptom_text == null) return;
+   
+   BoardLog.logD("BIRD","Update instance " + initial_response + " " +
+         getInstanceState());
    
    location_text.setText(for_instance.getLocationString());
    symptom_text.setText(for_instance.getSymptomString());
@@ -268,7 +279,8 @@ private class DisplayResponse implements Runnable {
       appendOutput(disp);
       disp = "<div align='left'><p><font color='black'>" + result_string +
             "</font></p></div>";
-      appendOutput(disp);    
+      appendOutput(disp); 
+      scrollToBottom();
     }
    
 }       // end of inner class DisplayResponse
@@ -361,6 +373,8 @@ private void setupPanel()
    inp.setMaximumSize(new Dimension(300,150));
    addLabellessRawComponent("Query",inp,true,true);
    
+   log_pane.addFocusListener(new PanelFocusHandler());
+   
    addSeparator();
    
    if (!for_instance.getAutoQuery()) {
@@ -433,6 +447,54 @@ private void appendOutput(String s)
       BoardLog.logE("BIRD","Problem appending output",e);
     }
 }
+
+
+private void scrollToBottom()
+{
+   if (!auto_scroll) return;
+   
+   SwingUtilities.invokeLater(new Scroller());
+}
+
+
+
+private final class Scroller implements Runnable {
+
+   @Override public void run() {
+      HTMLDocument doc = (HTMLDocument) log_pane.getDocument();
+      log_pane.validate();
+      
+      int len = doc.getLength();
+      try {
+         Rectangle r = SwingText.modelToView2D(log_pane,len-1);
+         if (r != null) {
+            Dimension sz = log_pane.getPreferredSize();
+            r.x = 0;
+            r.y += 20;
+            if (r.y + r.height > sz.height) r.y = sz.height;
+            log_pane.scrollRectToVisible(r);
+          }
+       }
+      catch (BadLocationException ex) {
+         BoardLog.logE("BIRD","Problem scrolling to end of debug panel: " + ex);
+       }
+    }
+   
+}       // end of inner class Scroller
+
+
+
+private final class PanelFocusHandler extends FocusAdapter implements Runnable {
+   
+   @Override public void focusGained(FocusEvent e) {
+      SwingUtilities.invokeLater(this);
+    }
+   
+   @Override public void run() {
+      input_area.requestFocusInWindow();
+    }
+   
+}       // end of inner class PanelFocusListener
 
 
 
@@ -662,7 +724,7 @@ private final class ExplainAction extends AbstractAction implements ResponseHand
                break;      
           }
        }
-      BoardProperties bp = BoardProperties.getProperties("BIRD");
+      BoardProperties bp = BoardProperties.getProperties("Bird");
       if (bp.getBoolean("Bird.explain.simple")) {
          xcmd = "BASEEXPLAIN";
        }
@@ -838,7 +900,7 @@ private final class RepairsAction extends AbstractAction implements ResponseHand
                break;      
           }
        }
-      BoardProperties bp = BoardProperties.getProperties("BIRD");
+      BoardProperties bp = BoardProperties.getProperties("Bird");
       if (bp.getBoolean("Bird.explain.simple")) {
          xcmd = "BASEREPAIRS";
        }
@@ -861,14 +923,15 @@ private final class RepairsAction extends AbstractAction implements ResponseHand
       int delta = (num_retries == 0 ? 0 : 4);
       try {
          for (Element patch : IvyXml.children(xml,"PATCH")) {
-            Collection<BirdFileEdit> nedit = convertPatchToEdits(IvyXml.getText(patch),delta);
+            Collection<BirdFileEdit> nedit = convertPatchToEdits(IvyXml.getText(patch),
+                  delta);
             if (nedit != null) edits.addAll(nedit);
           }
        }
       catch (BirdException e) {
          if (num_retries++ < 3) {
             String msg = e.getMessage();
-            String retry = "That is an invalid patch. " +
+            String retry = "That is an invalid patch (line numbers or lines do not match). " +
                   msg + " Try again.";
             AskLimbaCommand cmd = new AskLimbaCommand("REPAIRS",retry,this);
             cmd.start();
