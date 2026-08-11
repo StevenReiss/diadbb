@@ -51,6 +51,7 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -355,7 +356,7 @@ private void setupPanel()
          JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
    outrgn.setMinimumSize(new Dimension(300,100));
    outrgn.setPreferredSize(new Dimension(300,200));
-   addLabellessRawComponent("Log",outrgn,true,true);
+// addLabellessRawComponent("Log",outrgn,true,true);
    
    SwingGridPanel inp = new SwingGridPanel();
    inp.addGBComponent(new JLabel("Enter Query"),0,0,1,1,10,0);
@@ -371,7 +372,15 @@ private void setupPanel()
    inp.setMinimumSize(new Dimension(300,75));
    inp.setPreferredSize(new Dimension(300,100));
    inp.setMaximumSize(new Dimension(300,150));
-   addLabellessRawComponent("Query",inp,true,true);
+// addLabellessRawComponent("Query",inp,true,true);
+   
+   JSplitPane split = new JSplitPane(JSplitPane.VERTICAL_SPLIT,
+         outrgn,inp);
+   split.setContinuousLayout(true);
+   split.setResizeWeight(0.8);
+   split.setDividerLocation(-1);
+   
+   addLabellessRawComponent("Query",split,true,true);
    
    log_pane.addFocusListener(new PanelFocusHandler());
    
