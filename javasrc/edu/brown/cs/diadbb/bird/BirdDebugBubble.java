@@ -106,6 +106,8 @@ BirdDebugBubble(BirdFactory fac,Object lid)
    active_panels.put(bi.getId(),pnl);
     
    debug_tabs.addTab(bi.getTitle(),pnl);
+   int idx = findPanelIndex(pnl);
+   debug_tabs.setSelectedIndex(idx);
    
    updateDebugInstance(bi);
    

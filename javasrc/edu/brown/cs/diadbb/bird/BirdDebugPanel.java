@@ -111,6 +111,7 @@ private Boolean         initial_response;
 private boolean         have_explanation;
 private boolean         auto_scroll;
 
+
 private static final Pattern HUNK_HEADER_PATTERN = 
    Pattern.compile("^@@ -(\\d+),?(\\d*) \\+(\\d+),?(\\d*) @@.*");
 
@@ -396,9 +397,9 @@ private void setupPanel()
       retry_btn = addBottomButton("Try Again","RETRY",true,
             new RetryAction());
     }
-   locations_btn = addBottomButton("Sources","LOCS",true,
+   locations_btn = addBottomButton("Show Code","LOCS",true,
          new LocationsAction());
-   repairs_btn = addBottomButton("Repairs","FIX",true,
+   repairs_btn = addBottomButton("Find Repairs","FIX",true,
          new RepairsAction());
   
    addBottomButtons();
@@ -885,6 +886,7 @@ private final class RepairsAction extends AbstractAction implements ResponseHand
    private Collection<BirdFileEdit> repair_edits;
    private int num_retries;
    
+   
    private static final long serialVersionUID = 1;
    
    RepairsAction() {
@@ -913,11 +915,14 @@ private final class RepairsAction extends AbstractAction implements ResponseHand
       if (bp.getBoolean("Bird.explain.simple")) {
          xcmd = "BASEREPAIRS";
        }
-      AskLimbaCommand cmd = new AskLimbaCommand(xcmd,null,this);
+      String cnts = input_area.getText();
+      if (cnts.isBlank()) cnts = null;
+      AskLimbaCommand cmd = new AskLimbaCommand(xcmd,cnts,this);
       cmd.start();
       String disp = "<div align='right'><p style='text-indent: 50px;'><font color='blue'>" + query + 
             "</font></p></div>";
       appendOutput(disp);
+      input_area.setText("");
     }
    
    @Override public void handleResponse(Element xml0) {
