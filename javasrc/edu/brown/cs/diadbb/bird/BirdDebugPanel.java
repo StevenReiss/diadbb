@@ -945,15 +945,15 @@ private final class RepairsAction extends AbstractAction implements ResponseHand
       catch (BirdException e) {
          if (num_retries++ < 3) {
             String msg = e.getMessage();
-            String retry = "That is an invalid patch (line numbers or lines do not match). " +
-                  msg + " Try again.";
+            String retry = "That is an invalid patch (line numbers or lines do not match" +
+                  " or filename missing). " + msg + " Try again.";
             AskLimbaCommand cmd = new AskLimbaCommand("REPAIRS",retry,this);
             cmd.start();
             return;
           }
        }
       
-      if (edits.isEmpty()) {
+      if (edits == null || edits.isEmpty()) {
          Responder resp = new Responder();  
          resp.handleResponse(xml);
        }
@@ -1100,6 +1100,11 @@ private final class RepairsAction extends AbstractAction implements ResponseHand
       String ln1 = null;
       String ln0 = line.trim().replace("\t","");
       ln0 = ln0.replace(" ","");
+      
+      if (file == null) {
+         String msg = " Please use standard patch format including a file name.";
+         throw new BirdException(msg);
+       }
       
       for (int i = 0; i < 4; ++i) {
          int pos0 = file.findLineOffset(srcline);
