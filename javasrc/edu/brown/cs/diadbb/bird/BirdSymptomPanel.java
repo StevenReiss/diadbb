@@ -147,7 +147,7 @@ BirdSymptomPanel(BirdInstance bi)
       BumpThreadStack bs = for_thread.getStack();
       for (int i = 0; i < bs.getNumFrames(); ++i) {
          BumpStackFrame bsf = bs.getFrame(i);
-         if (bsf == null) continue;
+         if (bsf == null || bsf.isSystem()) continue;
          if (bsf.getId().equals(fidx)) {
             for_frame = bsf;
             break;
@@ -997,6 +997,9 @@ private List<String> findVariables()
 
 private List<String> findExpressions()
 {
+   List<String> exps = new ArrayList<>();
+   if (bale_file == null) return exps;
+   
    int off = bale_file.findLineOffset(for_frame.getLineNumber());
    CommandArgs args = new CommandArgs("THREAD",for_thread.getId(),
          "DEBUGID",for_instance.getId(),
@@ -1009,7 +1012,6 @@ private List<String> findExpressions()
    BirdFactory bush = BirdFactory.getFactory();
    Element rslt = bush.sendDiadMessage("EXPRESSIONS",args,null);
 
-   List<String> exps = new ArrayList<>();
    expression_data = new HashMap<>();
    for (Element e : IvyXml.children(rslt,"EXPR")) {
       String exp = IvyXml.getTextElement(e,"TEXT");
