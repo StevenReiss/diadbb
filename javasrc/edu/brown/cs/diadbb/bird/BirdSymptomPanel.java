@@ -408,13 +408,25 @@ private interface ValuePanel {
 /*                                                                              */
 /********************************************************************************/
 
-private final class LocationPanel extends DataPanel {
+private final class LocationPanel extends DataPanel implements UndoableEditListener {
 
+   private JTextArea    reason_value;
+   
    private static final long serialVersionUID = 1;
 
+   LocationPanel() {
+      setBackground(BoardColors.getColor("Bird.panel.background"));
+      setOpaque(false);
+      beginLayout();
+      reason_value = addTextArea("Reason",null,5,60,this);
+    }
+   
    @Override void outputXml(IvyXmlWriter xw) {
       xw.begin("SYMPTOM");
       xw.field("TYPE","LOCATION");
+      if (!reason_value.getText().isBlank()) {
+         xw.cdataElement("DETAIL",reason_value.getText());
+       }
       xw.end("SYMPTOM");
     }
 
@@ -425,7 +437,11 @@ private final class LocationPanel extends DataPanel {
    @Override boolean checkPanelValid() {
       return true;
     }
-
+   
+   @Override public void undoableEditHappened(UndoableEditEvent evt) {
+      checKValid();
+    }
+   
 }       // end of inner class LocationPanel
 
 
