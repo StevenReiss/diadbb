@@ -770,8 +770,13 @@ private final class RetryAction extends AbstractAction implements ResponseHandle
       if (cnts.isBlank()) cnts = null;
       AskLimbaCommand cmd = new AskLimbaCommand("RETRY",cnts);
       cmd.start();
-      String disp = "<div align='right'><p style='text-indent: 50px;'><font color='blue'>" + query + 
-            "</font></p></div>";
+      String disp = "";
+      if (cnts != null) {
+         disp = "<div align='right'><p style='text-indent: 50px;'><font color='blue'>" + cnts + 
+            "</font></p></div>\n";
+       }
+      disp +=  "<div align='right'><p style='text-indent: 50px;'><font color='blue'>" + query + 
+            "</font></p></div>\n";
       appendOutput(disp);
       input_area.setText("");
     }

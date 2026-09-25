@@ -434,6 +434,7 @@ private boolean startLimba()
    
    if (BoardSetup.getSetup().getRunMode() == BoardConstants.RunMode.CLIENT) {
       MintDefaultReply rply = new MintDefaultReply();
+      BoardLog.logD("BAIT","Send PING to LIMBA");
       mc.send("<LIMBA DO='PING' />");
       String rslt = rply.waitForString();
       if (rslt != null) {
